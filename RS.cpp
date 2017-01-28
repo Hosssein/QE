@@ -182,7 +182,7 @@ void computeRSMethods(Index* ind)
 
 #define UpProf  1
 #define COMPAVG 1
-    string methodName = "_QE_W2V_Stemmed_NoSW_";
+    string methodName = "_QE_W2V_M:Centroid_Stemmed_NoSW_";
 
     outFilename += methodName;
     outFilename += "_CsT_NumbersT_CoefT_#topPos:10-40(10)_";////#topPosW:30-30(0)
@@ -332,15 +332,14 @@ void computeRSMethods(Index* ind)
 
                                             if (results.size() % 15 == 0 /*&& feedbackMode > 0*/)
                                                 myMethod->updateProfile(*((TextQueryRep *)(qr)),relJudgDocs , nonRelJudgDocs );
-#endif
 
+#endif
                                             if(!isRel)
                                                 if( numberOfShownNonRelDocs == numOfShownNonRel )
                                                 {
                                                     myMethod->updateThreshold(*((TextQueryRep *)(qr)), relJudgDocs , nonRelJudgDocs ,0);//inc thr
                                                     numberOfShownNonRelDocs =0;
                                                 }
-
                                         }
                                         else
                                         {
@@ -874,7 +873,7 @@ void computeQueryAvgVec(Document *d,RetMethod *myMethod )
         }
         delete qt;
     }
-    cerr<<queryTerms.size()<<" ";
+    //cerr<<queryTerms.size()<<" ";
     vector<double> queryAvg( myMethod->W2VecDimSize ,0.0);
     for(int i = 0 ; i< queryTerms.size() ; i++)
     {
