@@ -969,6 +969,7 @@ protected:
     void multiplyVec2Vec(vector<double> m1,  vector<vector<double> >&res );
     void computeCoefMatrix();
     void computeNearestTerm2Vec(vector<double>);
+    void nearestTerm2Vec(vector<double>, vector<pair<int, double> > &nearestTerm);
     //@}
 
     RetParameter::DocSmoothParam docParam;
@@ -1004,6 +1005,7 @@ public:
     vector<double> Vq;
     vector<vector<double> > Vwn ,Vbwn;
     double numberOfPositiveSelectedTopWord,numberOfNegativeSelectedTopWord;
+
     double numberOfTopSelectedWord4EacQword;
 
 

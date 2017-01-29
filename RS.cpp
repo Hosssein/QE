@@ -182,10 +182,10 @@ void computeRSMethods(Index* ind)
 
 #define UpProf  1
 #define COMPAVG 1
-    string methodName = "_QE_W2V_M:Centroid_Stemmed_NoSW_";
+    string methodName = "_QE_W2V_M:CombSUM_Stemmed_NoSW_";
 
     outFilename += methodName;
-    outFilename += "_CsT_NumbersT_CoefT_#topPos:10-40(10)_";////#topPosW:30-30(0)
+    outFilename += "_CsT_NumbersT_CoefT_#topPos:{50,100}_topPerQW{10,25}";////#topPosW:30-30(0)
 
     ofstream out(outFilename.c_str());
 
@@ -198,11 +198,11 @@ void computeRSMethods(Index* ind)
 
     for (double thresh = start_thresh ; thresh<=end_thresh ; thresh += intervalThresholdHM)
         for(double fbCoef = 0.0 ; fbCoef <=1.01 ; fbCoef+=0.2)//lambda
-            for(double topPos = 10; topPos <= 25 ; topPos+=15)//
-                //for(double SelectedWord4Q = 50; SelectedWord4Q <= 100 ; SelectedWord4Q += 50)//4
+            for(double topPos = 50; topPos <= 100 ; topPos+=50)//n
+                for(double SelectedWord4Q = 10; SelectedWord4Q <= 25 ; SelectedWord4Q += 15)
             {
                 //double thresh = startThresholdHM;
-                double SelectedWord4Q =15;
+                //double SelectedWord4Q =15;
                 //double topPos = 30.0;
                 //double fbCoef = 0.2;//lambda
 
@@ -224,9 +224,9 @@ void computeRSMethods(Index* ind)
                                 //int numOfnotShownDoc = 500;
                             {
                                 myMethod->setThreshold(thresh);
-                                myMethod->setNumberOfPositiveSelectedTopWordAndFBcount(topPos);
 
-                                //myMethod->setNumberOfTopSelectedWord4EacQword(SelectedWord4Q);
+                                myMethod->setNumberOfPositiveSelectedTopWordAndFBcount(topPos);//n
+                                myMethod->setNumberOfTopSelectedWord4EacQword(SelectedWord4Q);//v
 
 
                                 cout<<"c1: "<<c1<<" c2: "<<c2<<" numOfShownNonRel: "<<numOfShownNonRel<<" numOfnotShownDoc: "<<numOfnotShownDoc<<" "<<endl;
@@ -813,7 +813,9 @@ void showNearerTerms2QueryVecInW2V(DocStream *qs,RetMethod *myMethod ,Index *ind
 
 void computeQueryAvgVec(Document *d,RetMethod *myMethod )
 {
-#if 0
+#if 1
+
+    //not weighted(no for!)
     queryTermsIdVec.clear();
 
     TextQuery *q = new TextQuery(*d);
@@ -832,8 +834,9 @@ void computeQueryAvgVec(Document *d,RetMethod *myMethod )
 
         if(it != endIt)//found
         {
-            for(int i=0; i < qt->weight() ; i++)
-                queryTermsIdVec.push_back(make_pair<int , vector<double> > (qt->id() ,it->second ) );
+            //for(int i=0; i < qt->weight() ; i++)   //(<queryW1,<1,2,4>)(queryW1,<1,2,3>)
+
+            queryTermsIdVec.push_back(make_pair<int , vector<double> > (qt->id() ,it->second ) );
         }
         else
         {
@@ -847,7 +850,7 @@ void computeQueryAvgVec(Document *d,RetMethod *myMethod )
     delete q;
     //delete textQR;
 #endif
-#if 1//Centroid(AVG)
+#if 0//Centroid(AVG)
     TextQuery *q = new TextQuery(*d);
     QueryRep *qr = myMethod->computeQueryRep(*q);
     TextQueryRep *textQR = (TextQueryRep *)(qr);
