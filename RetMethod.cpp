@@ -492,11 +492,9 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
         }
 
         for(int ii = i * numberOfTopSelectedWord4EacQword ; ii < probWordVec.size() ; ii++)
-        {
             probWordVec[ii].first /= totalSc;
-        }
 
-    //cerr<<ind.term(queryTermsIdVec[i].first)<<" ";
+        //cerr<<ind.term(queryTermsIdVec[i].first)<<" ";
     }
 
     std::sort(probWordVec.begin() , probWordVec.end() , pairCompare);// can use top n selecting algorithm O(n)
