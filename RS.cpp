@@ -144,6 +144,8 @@ int main(int argc, char * argv[])
 
         break;
     }
+
+
     Index *ind = IndexManager::openIndex(indexPath);// with StopWord && stemmed
 
     //writeDocs2File(ind);
@@ -181,7 +183,7 @@ void computeRSMethods(Index* ind)
 
 #define UpProf  1
 #define COMPAVG 1
-    string methodName = "_QE_W2V_M:CombSUM_Stemmed_NoSW_";
+    string methodName = "_QE_W2V_M:CombMNZ_Stemmed_NoSW_";
 
     outFilename += methodName;
     outFilename += "_CsT_NumbersT_CoefT_#topPosPerQW:{50,100}_topPerQuery{10,25}";////#topPosW:30-30(0)

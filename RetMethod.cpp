@@ -469,46 +469,56 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
                                                 vector<int> relJudgDoc ,vector<int> nonRelJudgDoc)
 {
 #define CENTROID 0
-#define COMBSUM 1
-#define COMBMNZ 0
+#define COMBSUM 0
+#define COMBMNZ 1
 
 #if COMBMNZ
 
     vector<pair<double, int> >probWordVec;
-
-
+    map<int, double> idScore;
+    map<int, int>tidNumOfOccurInQueryNearestList;
+    vector<pair<double, int> >temp;
 
     for(int i = 0 ; i < queryTermsIdVec.size() ; i++)
     {
         vector<double> qTermVec(queryTermsIdVec[i].second);
-
         vector<pair<int ,double> > nearestIdVecs;
         nearestTerm2Vec(qTermVec , nearestIdVecs);//n(50,100) most similar terms
 
         double totalSc =0;
         for(int j = 0 ;j < nearestIdVecs.size() ; j++)
         {
-            double sc = exp(nearestIdVecs[j].first);
+            double sc = exp(nearestIdVecs[j].second);
             totalSc+=sc;
 
-            probWordVec.push_back(make_pair<double, int> (sc, nearestIdVecs[j].first ) );
+            //probWordVec.push_back(make_pair<double, int> (sc, nearestIdVecs[j].first ) );
+            temp.push_back(make_pair<double, int> (sc, nearestIdVecs[j].first ) );
+            tidNumOfOccurInQueryNearestList[nearestIdVecs[j].first ]++;
         }
 
-        for(int ii = i * tops4EachQueryTerm ; ii < probWordVec.size() ; ii++)
-            probWordVec[ii].first /= totalSc;
+        for(int j = 0 ; j < tops4EachQueryTerm ; j++)
+        {
+            temp[j].first /= totalSc;
 
+            idScore[temp[j].second] += temp[j].first;
+
+        }
+
+
+
+        //for(int ii = i * tops4EachQueryTerm ; ii < probWordVec.size() ; ii++)
+            //probWordVec[ii].first /= totalSc;
         //cerr<<ind.term(queryTermsIdVec[i].first)<<" ";
     }
-
-    std::sort(probWordVec.begin() , probWordVec.end() , pairCompare);// can use top n selecting algorithm O(n)
-
-    for(int i = 0 ; i < probWordVec.size() ;i ++)
+    map<int, double>::iterator mit ;
+    for(mit = idScore.begin() ; mit != idScore.end() ;++mit)
     {
-        cerr<<probWordVec[i].second<<" ";
+        double hscore = mit->second * (tidNumOfOccurInQueryNearestList[mit->first]);
+        probWordVec.push_back(make_pair<double,int>(hscore, mit->first) );
     }
 
-    cerr<<endl<<endl;
 
+    std::sort(probWordVec.begin() , probWordVec.end() , pairCompare);// can use top n selecting algorithm O(n)
     /*cerr<<" ::: ";
     for(int i = 0 ; i < probWordVec.size() ;i ++)
         cerr<< ind.term(probWordVec[i].second)<<" ";
@@ -517,7 +527,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     COUNT_T numTerms = ind.termCountUnique();
     lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
 
-    for (int i = 0; i < tops4EachQuery; i++)
+    for (int i = 0; i < tops4EachQuery; i++)//v
         lmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
 
 
