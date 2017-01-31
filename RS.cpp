@@ -198,8 +198,8 @@ void computeRSMethods(Index* ind)
 
     for (double thresh = start_thresh ; thresh<=end_thresh ; thresh += intervalThresholdHM)
         for(double fbCoef = 0.0 ; fbCoef <=1.01 ; fbCoef+=0.2)//lambda
-            for(double topPos = 50; topPos <= 100 ; topPos+=50)//n
-                for(double SelectedWord4Q = 10; SelectedWord4Q <= 25 ; SelectedWord4Q += 15)
+            for(double topPos = 50; topPos <= 100 ; topPos+=50)//n for each query term
+                for(double SelectedWord4Q = 10; SelectedWord4Q <= 25 ; SelectedWord4Q += 15)//v for each query(whole)
                 {
                     //double thresh = startThresholdHM;
                     //double SelectedWord4Q =15;
@@ -225,17 +225,20 @@ void computeRSMethods(Index* ind)
                                 {
                                     myMethod->setThreshold(thresh);
 
-                                    myMethod->setNumberOfPositiveSelectedTopWordAndFBcount(topPos);//n
-                                    myMethod->setNumberOfTopSelectedWord4EacQword(SelectedWord4Q);//v
+                                    myMethod->setTop4EachQuery(SelectedWord4Q);//v
+                                    myMethod->setTopWords4EachQueryTerm(topPos);//n
+
+                                    //myMethod->setNumberOfPositiveSelectedTopWordAndFBcount(topPos);//n
+                                    //myMethod->setNumberOfTopSelectedWord4EacQword(SelectedWord4Q);//v
 
 
                                     cout<<"c1: "<<c1<<" c2: "<<c2<<" numOfShownNonRel: "<<numOfShownNonRel<<" numOfnotShownDoc: "<<numOfnotShownDoc<<" "<<endl;
-                                    resultPath = resultFileNameHM.c_str() +numToStr( myMethod->getThreshold() )+"_c1:"+numToStr(c1)+"_c2:"+numToStr(c2)+"_#showNonRel:"+numToStr(numOfShownNonRel)+"_#notShownDoc:"+numToStr(numOfnotShownDoc)+"#topPosW:"+numToStr(myMethod->numberOfPositiveSelectedTopWord)+"#topNegW:"+numToStr(myMethod->numberOfNegativeSelectedTopWord);
+                                    resultPath = resultFileNameHM.c_str() +numToStr( myMethod->getThreshold() )+"_c1:"+numToStr(c1)+"_c2:"+numToStr(c2)+"_#showNonRel:"+numToStr(numOfShownNonRel)+"_#notShownDoc:"+numToStr(numOfnotShownDoc)+"#topPosW:"+numToStr(myMethod->tops4EachQueryTerm)+"#topNegW:"+numToStr(myMethod->numberOfNegativeSelectedTopWord);
                                     resultPath += "fbCoef:"+numToStr(fbCoef)+methodName+"_NoCsTuning_NoNumberT"+"_topSelectedWord:"+numToStr(SelectedWord4Q)+".res";
 
 
                                     //myMethod->setThreshold(thresh);
-                                    out<<"threshold: "<<thresh<<" fbcoef: "<<fbCoef<<" topPos: "<<topPos<<" topSelectedWord: "<<SelectedWord4Q<<endl ;
+                                    out<<"threshold: "<<thresh<<" fbcoef: "<<fbCoef<<" n: "<<topPos<<" v: "<<SelectedWord4Q<<endl ;
 
                                     IndexedRealVector results;
 

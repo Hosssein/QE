@@ -282,8 +282,8 @@ lemur::retrieval::RetMethod::RetMethod(const Index &dbIndex,
     //Vbwn.assign(W2VecDimSize , 0.0);
     //Vwn.assign(W2VecDimSize , 0.0);
 
-    numberOfPositiveSelectedTopWord = 20.0;
-    numberOfNegativeSelectedTopWord = 20.0;
+    //numberOfPositiveSelectedTopWord = 20.0;
+    //numberOfNegativeSelectedTopWord = 20.0;
 
 
     /*
@@ -456,7 +456,7 @@ void lemur::retrieval::RetMethod::nearestTerm2Vec(vector<double> vec ,
     }
     std::sort(simTermid.begin() , simTermid.end(),pairCompare);
 
-    for(int i = 0 ; i < numberOfTopSelectedWord4EacQword ; i++)
+    for(int i = 0 ; i < tops4EachQueryTerm ; i++)//n
     {
         nearestTerm.push_back(make_pair<int ,double > (simTermid[i].second,simTermid[i].first));
     }
@@ -470,8 +470,9 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 {
 #define CENTROID 0
 #define COMBSUM 1
+#define COMBMNZ 0
 
-#if COMBSUM
+#if COMBMNZ
 
     vector<pair<double, int> >probWordVec;
 
@@ -514,84 +515,52 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
     qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
 
+#endif
 
-    /*
-    map<int, vector<double> >::iterator endIt = wordEmbedding.end();
+#if COMBSUM
 
-    vector<pair<double, int> >selectedWordProbId;
     vector<pair<double, int> >probWordVec;
-    lemur::langmod::DocUnigramCounter *dCounter;
-    dCounter = new lemur::langmod::DocUnigramCounter(ind);
-    dCounter->startIteration();
-    while(dCounter->hasMore())
+
+    for(int i = 0 ; i < queryTermsIdVec.size() ; i++)
     {
-        int eventInd;
-        double weight;
-        dCounter->nextCount(eventInd,weight);
+        vector<double> qTermVec(queryTermsIdVec[i].second);
 
-        map<int, vector<double> >::iterator tempit = wordEmbedding.find(eventInd);
+        vector<pair<int ,double> > nearestIdVecs;
+        nearestTerm2Vec(qTermVec , nearestIdVecs);//n(50,100) most similar terms
 
-        if( tempit != endIt )
+        double totalSc =0;
+        for(int j = 0 ;j < nearestIdVecs.size() ; j++)
         {
-            vector<double> tt = tempit->second;
-            vector<vector<double> > nearestVecs = nearestTerm2Vec(tt);//n(50,100) most similar terms
+            double sc = exp(nearestIdVecs[j].first);
+            totalSc+=sc;
 
-            for(int ii = 0 ; ii < queryTermsIdVec.size() ; ii++)
-            {
-                probWordVec.clear();
-
-                for(int i = 0 ;i < nearestVecs.size() ; i++)
-                    double sc = softMaxFunc(nearestVecs[i] , tt);
-
-                sc += 1.0;//[-1:1]-->[0:2]
-                probWordVec.push_back(pair<double,int>( sc , eventInd));
-            }
+            probWordVec.push_back(make_pair<double, int> (sc, nearestIdVecs[j].first ) );
         }
-        double total_sc= 0.0;
 
-        for(int i = 0 ; i < probWordVec.size() ; i++)
-        {
-            int cc = dCounter->count(probWordVec[i].second );
-            double score_ = log(1 + cc)* exp(2.0*probWordVec[i].first);
+        for(int ii = i * tops4EachQueryTerm ; ii < probWordVec.size() ; ii++)
+            probWordVec[ii].first /= totalSc;
 
-            probWordVec[i].first =  score_ ;
-            total_sc += score_;
-        }
-        for(int i = 0 ; i < probWordVec.size() ; i++)
-        {
-            probWordVec[i].first /= total_sc;
+        //cerr<<ind.term(queryTermsIdVec[i].first)<<" ";
+    }
 
-        }
-        std::sort(probWordVec.begin() , probWordVec.end() , pairCompare);// can use top n selecting algorithm O(n)
+    std::sort(probWordVec.begin() , probWordVec.end() , pairCompare);// can use top n selecting algorithm O(n)
 
-
-        int cc = -1;
-        if(numberOfTopSelectedWord4EacQword < probWordVec.size())
-            cc = numberOfTopSelectedWord4EacQword;
-        else
-            cc = probWordVec.size();
-        for(int i = 0 ; i < cc ; i++)
-        {
-            selectedWordProbId.push_back( probWordVec[i] );
-        }
-    }//end-for
+    /*cerr<<" ::: ";
+    for(int i = 0 ; i < probWordVec.size() ;i ++)
+        cerr<< ind.term(probWordVec[i].second)<<" ";
+    cerr << endl;*/
 
     COUNT_T numTerms = ind.termCountUnique();
     lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
 
-    int countPos = selectedWordProbId.size();
-    for (int i = 0; i < countPos; i++)
-    {
-        lmCounter.incCount(selectedWordProbId[i].second , selectedWordProbId[i].first);
-    }
+    for (int i = 0; i < tops4EachQuery; i++)//v
+        lmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
+
 
     QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
     lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
     qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
 
-    delete dCounter;
-    delete fblm;
-*/
 #endif
 #if CENTROID
     //cosWithAvg(Centroid)
@@ -1506,334 +1475,6 @@ void lemur::retrieval::RetMethod::computeNearestTerm2Vec(vector<double> vec )
 
 }
 
-
-void lemur::retrieval::RetMethod::multiplyVec2Vec(vector<double> m1, vector<vector<double> >&res )
-{
-    //cout<< endl<<W2VecDimSize<<endl;
-    for(int i = 0 ;i < W2VecDimSize ;i++)
-        for(int j = 0 ; j < W2VecDimSize ; j++)
-            res[i][j] += m1[i] * Vq[j];
-
-}
-void lemur::retrieval::RetMethod::multiplyMatrix2Vec(vector<double>&res  )
-{
-    //(N*N)^T * (1*N)^T
-    for(int j = 0 ; j < W2VecDimSize ; j++)
-        for(int k = 0 ; k < W2VecDimSize ; k++)
-        {
-            //cerr<<"j "<<j <<" k "<<k<<" m1 "<<m1[k][j]<<" m2 "<<m2[k]<<endl;
-            res[j] += coefMatrix[k][j] * Vq[k];
-        }
-    //cout<<res[50]<<endl;
-}
-
-void lemur::retrieval::RetMethod::computeCoefMatrix()
-{
-    bool isChangeSmall = false;
-    int epoch = 2000;//eta should be decreased
-
-    vector<double>WVq(W2VecDimSize ,0.0);
-
-    //cerr << Vwn.size()<<" "<<Vbwn.size() << endl;
-    while(epoch--)
-    {
-        WVq.assign(W2VecDimSize,0.0);
-        multiplyMatrix2Vec(WVq);
-
-        vector<vector<double> >wnMatrix(W2VecDimSize ,vector<double>(W2VecDimSize , 0.0));
-        vector<double>temp;//(W2VecDimSize ,0.0);
-        //rel
-
-        for(int i = 0 ; i < Vwn.size() ; i++)
-        {
-            temp.assign(W2VecDimSize,0.0);
-
-            for(int j = 0 ; j < W2VecDimSize; j++)
-                temp[j] = WVq[j] - Vwn[i][j];
-            //cerr<<temp[10]<<" ";
-
-            multiplyVec2Vec(temp,wnMatrix);
-        }
-        temp.clear();
-        temp.assign(W2VecDimSize,0.0);
-
-        //nonRel
-        vector<vector<double> >wnbMatrix(W2VecDimSize ,vector<double>(W2VecDimSize , 0.0));
-        //multiplyMatrix2Vec(temp);
-
-        for(int i = 0 ; i < Vbwn.size() ;i++)
-        {
-            temp.assign(W2VecDimSize,0.0);
-            for(int j = 0 ; j < W2VecDimSize; j++)
-                temp[j] = WVq[j] - Vbwn[i][j];
-            multiplyVec2Vec(temp,wnbMatrix);
-        }
-        //diff
-        double norm = 0;
-        for(int i = 0 ; i < W2VecDimSize ; i++)
-            for( int j = 0 ; j < W2VecDimSize ; j++ )
-            {
-                double before =coefMatrix[i][j];
-                coefMatrix[i][j] = ( coefMatrix[i][j] - etaCoef * ( alphaCoef * wnMatrix[i][j] - lambdaCoef * wnbMatrix[i][j] - betaCoef * coefMatrix[i][j] ) );
-                norm += (before - coefMatrix[i][j])*(before - coefMatrix[i][j]);
-                //cerr<<coefMatrix[i][j]<<" ";
-            }
-
-        norm = std::sqrt(norm);
-        //cout<<1e1<<" "<<1e2;
-        cerr<<"norm : "<<norm<<endl;
-        if(norm < 0.0001)
-        {
-            isChangeSmall = true;
-            vector<double> tempVq(W2VecDimSize,0.0);
-            cerr<<"Update Query Vec11111\n";
-            for(int i = 0 ; i < W2VecDimSize ; i++)
-                for(int j =0 ; j < W2VecDimSize ; j++)
-                    tempVq[i] += coefMatrix[i][j] * Vq[j];
-
-            Vq.clear();
-            Vq.assign(tempVq.begin() ,tempVq.end());
-            //Vq.assign(W2VecDimSize,0.0);
-            //Vq = tempVq;
-
-            break;
-        }
-
-    }//end epoch
-
-    if(isChangeSmall == false)
-    {
-        vector<double> tempVq(W2VecDimSize,0.0);
-        //cerr<<"Update Query Vec222222\n";
-        for(int i = 0 ; i < W2VecDimSize ; i++)
-            for(int j =0 ; j < W2VecDimSize ; j++)
-                tempVq[i] += coefMatrix[i][j] * Vq[j];
-
-        //for(int i = 0 ; i < W2VecDimSize ; i++)
-        //    cerr<<Vq[i]<<" "<<tempVq[i]<<" ";
-
-        Vq.clear();
-        Vq.assign(tempVq.begin() , tempVq.end());
-        //Vq.assign(W2VecDimSize,0.0);
-        //Vq = tempVq;
-    }
-}
-
-void lemur::retrieval::RetMethod::computeRelNonRelDist(TextQueryRep &origRep,
-                                                       const vector<int> relDocs, const vector<int> nonRelDocs,bool isRelevant, bool computeCoeff)
-{
-    COUNT_T numTerms = ind.termCountUnique();
-
-    lemur::langmod::DocUnigramCounter *dCounter;
-    if(isRelevant)
-    {
-        cerr<<"HERE11111 "<<relDocs.size()<<" "<<nonRelDocs.size()<<endl;
-        dCounter  = new lemur::langmod::DocUnigramCounter(relDocs, ind);
-    }
-    else
-    {
-        cerr<<"HERE22222 "<<relDocs.size()<<" "<<nonRelDocs.size()<<endl;
-        dCounter = new lemur::langmod::DocUnigramCounter(nonRelDocs, ind);
-    }
-
-    double *distQuery = new double[numTerms+1];
-    double *distQueryEst = new double[numTerms+1];
-
-
-    double meanLL=1e-40;
-    double distQueryNorm=0;
-
-    for (int i=1; i<=numTerms;i++)
-    {
-        distQueryEst[i] = rand()+0.001;
-        distQueryNorm += distQueryEst[i];
-    }
-
-    double noisePr = 0.9; //qryParam.fbMixtureNoise;
-    int itNum = qryParam.emIterations;
-    do {
-        // re-estimate & compute likelihood
-        double ll = 0;
-
-        for (int i=1; i<=numTerms;i++)
-        {
-            distQuery[i] = distQueryEst[i]/distQueryNorm;
-            // cerr << "dist: "<< distQuery[i] << endl;
-            distQueryEst[i] =0;
-        }
-
-        distQueryNorm = 0;
-
-        // compute likelihood
-        dCounter->startIteration();
-        while (dCounter->hasMore())
-        {
-            int wd; //dmf FIXME
-            double wdCt;
-            dCounter->nextCount(wd, wdCt);
-            ll += wdCt * log (noisePr*collectLM->prob(wd)  // Pc(w)
-                              + (1-noisePr)*distQuery[wd]); // Pq(w)
-        }
-        meanLL = 0.5*meanLL + 0.5*ll;
-        if (fabs((meanLL-ll)/meanLL)< 0.0001)
-        {
-            //cerr << "converged at "<< qryParam.emIterations - itNum+1  << " with likelihood= "<< ll << endl;
-            break;
-        }
-
-        // update counts
-        dCounter->startIteration();
-        while (dCounter->hasMore())
-        {
-            int wd; // dmf FIXME
-            double wdCt;
-            dCounter->nextCount(wd, wdCt);
-
-            double prTopic = (1-noisePr)*distQuery[wd]/
-                    ((1-noisePr)*distQuery[wd]+noisePr*collectLM->prob(wd));
-
-            double incVal = wdCt*prTopic;
-            distQueryEst[wd] += incVal;
-            distQueryNorm += incVal;
-        }
-    } while (itNum-- > 0);
-
-    lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
-    for (int i=1; i<=numTerms; i++)
-        if (distQuery[i] > 0)
-            lmCounter.incCount(i, distQuery[i]);
-
-
-    lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
-    //origRep.interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount,
-    //                      qryParam.fbPrSumTh, qryParam.fbPrTh);
-
-    vector<pair<double, int> >probWordVec;
-
-    fblm->startIteration();
-    while(fblm->hasMore())
-    {
-        int wid=-10;
-        double wprob=0.0;
-        fblm->nextWordProb(wid,wprob);
-        probWordVec.push_back(pair<double,int>(wprob,wid));
-    }
-
-
-    vector<int> queryWords;
-    origRep.startIteration();//ehtemalan Fix Meee!!!!!!!!!!!!!!!!!!!!!!!!!
-    while(origRep.hasMore())
-    {
-        int idd = origRep.nextTerm()->id();
-        //cerr<<idd<<" ";
-        queryWords.push_back(idd);
-    }
-
-    std::sort(probWordVec.begin(),probWordVec.end(),pairCompare);
-
-
-
-    double negWordCount =0.0;
-
-    /*for(int i = 0 ; i < wordCount ; i++)
-        cerr<<ind.term(probWordVec[i].second)<<" ";
-    cerr<<endl;*/
-
-    if(isRelevant)
-    {
-        double wordCount = std::min((double)probWordVec.size() , numberOfPositiveSelectedTopWord);
-        Vwn.clear();
-        //Vwn.assign(W2VecDimSize,0.0);
-
-        const std::map<int,vector<double> >::iterator endIt = wordEmbedding.end();
-        for(int i = 0 ; i < wordCount ; i++)
-        {
-            const std::map<int,vector<double> >::iterator it = wordEmbedding.find(probWordVec[i].second);
-            if( it != endIt )
-            {
-                Vwn.push_back(it->second);
-            }//else: cerr<<"fix me!\n";//Fix Me!!!!!!!!!!!!
-        }
-        cerr<<"REL: ";
-        for(int i = 0 ; i < wordCount ; i++)
-            cerr<< ind.term(probWordVec[i].second )<<" ";
-    }
-    else
-    {
-        Vbwn.clear();
-        //Vbwn.assign(W2VecDimSize,0.0);
-        double wordCount = std::min((double)probWordVec.size() , numberOfNegativeSelectedTopWord);
-
-        const vector<int>::iterator endfit = queryWords.end();
-        for(int i = 0 ; i < wordCount ;i++)
-        {
-            const vector<int>::iterator fit = std::find(queryWords.begin() ,queryWords.end(), probWordVec[i].second);
-            if(fit == endfit)//not found. is not query word
-            {
-                if(wordEmbedding.find(probWordVec[i].second) != wordEmbedding.end())
-                {
-                    negWordCount+=1;
-                    Vbwn.push_back(wordEmbedding[probWordVec[i].second] );
-                }
-            }
-        }
-        cerr<<"NoNREL: ";
-        for(int i = 0 ; i < wordCount ; i++)
-            cerr<< ind.term(probWordVec[i].second )<<" ";
-    }
-
-
-    //outputfile.close();
-#define TEST 0
-#if TEST
-    ofstream inputfile;
-    inputfile.open("outputfiles/NearestTerm2Vec.txt");
-
-    origRep.startIteration();//ehtemalan Fix Meee!!!!!!!!!!!!!!!!!!!!!!!!!
-    while(origRep.hasMore())
-    {
-        int idd = origRep.nextTerm()->id();
-        inputfile<<ind.term(idd)<<" ";
-    }
-    inputfile<<":"<<endl;
-    inputfile.close();
-#endif
-
-    if(computeCoeff)
-    {
-        computeNearestTerm2Vec(Vq);
-        //computeNearestTerm2Vec(Vwn);
-        //computeNearestTerm2Vec(Vbwn);
-
-        computeCoefMatrix();
-
-        computeNearestTerm2Vec(Vq);
-    }
-    else
-    {
-        /*for(int i = 0 ;i < W2VecDimSize ;i++)
-            cout<<Vwn[i]<<" ";
-
-        cout<<endl;
-        for(int i = 0 ;i < W2VecDimSize ;i++)
-            cout<<Vbwn[i]<<" ";
-        cout<<endl;*/
-    }
-
-
-#if TEST
-    //inputfile<<"AFTER Coef Multiplication :\n";
-    //computeNearestTerm2Vec(Vq);
-    //cout<<endl;
-    //computeNearestTerm2Vec(wordEmbedding[ind.term("dope")]);
-#endif
-
-    delete fblm;
-    delete dCounter;
-    delete[] distQuery;
-    delete[] distQueryEst;
-
-}
 
 void lemur::retrieval::RetMethod::updateThreshold(lemur::api::TextQueryRep &origRep,
                                                   vector<int> relJudgDoc ,vector<int> nonReljudgDoc , int mode)

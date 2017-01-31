@@ -965,9 +965,7 @@ protected:
 
 
 
-    void multiplyMatrix2Vec(vector<double> &res );
-    void multiplyVec2Vec(vector<double> m1,  vector<vector<double> >&res );
-    void computeCoefMatrix();
+
     void computeNearestTerm2Vec(vector<double>);
     void nearestTerm2Vec(vector<double>, vector<pair<int, double> > &nearestTerm);
     //@}
@@ -980,18 +978,16 @@ protected:
     const string supportFile;
 
 public:
-    void computeRelNonRelDist(TextQueryRep &origRep,
-                              const vector<int> relDocs, const vector<int> nonRelDocs, bool isRelevant, bool computeCoeff); //!!!
 
-    void setNumberOfPositiveSelectedTopWordAndFBcount(double n)
+    void setTop4EachQuery(double n)
     {
-        numberOfPositiveSelectedTopWord = n;
-        this->qryParam.fbTermCount = n;
+        tops4EachQuery = n;
+        //this->qryParam.fbTermCount = n;
     }
 
-    void setNumberOfTopSelectedWord4EacQword(double n)
+    void setTopWords4EachQueryTerm(double n)
     {
-        numberOfTopSelectedWord4EacQword = n;
+        tops4EachQueryTerm = n;
     }
 
     bool *relComputed;
@@ -1004,9 +1000,10 @@ public:
     //vector<double> queryAvgVec;
     vector<double> Vq;
     vector<vector<double> > Vwn ,Vbwn;
-    double numberOfPositiveSelectedTopWord,numberOfNegativeSelectedTopWord;
+    double /*numberOfPositiveSelectedTopWord,*/numberOfNegativeSelectedTopWord;
 
-    double numberOfTopSelectedWord4EacQword;
+    double tops4EachQuery;
+    double tops4EachQueryTerm;
 
 
     vector<int> initRel;
