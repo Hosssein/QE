@@ -476,50 +476,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
     vector<pair<double, int> >probWordVec;
 
-    for(int i = 0 ; i < queryTermsIdVec.size() ; i++)
-    {
-        vector<double> qTermVec(queryTermsIdVec[i].second);
 
-        vector<pair<int ,double> > nearestIdVecs;
-        nearestTerm2Vec(qTermVec , nearestIdVecs);//n(50,100) most similar terms
-
-        double totalSc =0;
-        for(int j = 0 ;j < nearestIdVecs.size() ; j++)
-        {
-            double sc = exp(nearestIdVecs[j].first);
-            totalSc+=sc;
-
-            probWordVec.push_back(make_pair<double, int> (sc, nearestIdVecs[j].first ) );
-        }
-
-        for(int ii = i * numberOfTopSelectedWord4EacQword ; ii < probWordVec.size() ; ii++)
-            probWordVec[ii].first /= totalSc;
-
-        //cerr<<ind.term(queryTermsIdVec[i].first)<<" ";
-    }
-
-    std::sort(probWordVec.begin() , probWordVec.end() , pairCompare);// can use top n selecting algorithm O(n)
-
-    /*cerr<<" ::: ";
-    for(int i = 0 ; i < probWordVec.size() ;i ++)
-        cerr<< ind.term(probWordVec[i].second)<<" ";
-    cerr << endl;*/
-
-    COUNT_T numTerms = ind.termCountUnique();
-    lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
-    for (int i = 0; i < numberOfPositiveSelectedTopWord; i++)
-        lmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
-
-
-    QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
-    lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
-    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
-
-#endif
-
-#if COMBSUM
-
-    vector<pair<double, int> >probWordVec;
 
     for(int i = 0 ; i < queryTermsIdVec.size() ; i++)
     {
@@ -545,6 +502,72 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
     std::sort(probWordVec.begin() , probWordVec.end() , pairCompare);// can use top n selecting algorithm O(n)
 
+    for(int i = 0 ; i < probWordVec.size() ;i ++)
+    {
+        cerr<<probWordVec[i].second<<" ";
+    }
+
+    cerr<<endl<<endl;
+
+    /*cerr<<" ::: ";
+    for(int i = 0 ; i < probWordVec.size() ;i ++)
+        cerr<< ind.term(probWordVec[i].second)<<" ";
+    cerr << endl;*/
+
+    COUNT_T numTerms = ind.termCountUnique();
+    lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
+
+    for (int i = 0; i < tops4EachQuery; i++)
+        lmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
+
+
+    QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
+    lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
+    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
+
+#endif
+
+#if COMBSUM
+    vector<pair<double, int> >probWordVec;
+    map<int, double> idScore;
+    vector<pair<double, int> >temp;
+
+    for(int i = 0 ; i < queryTermsIdVec.size() ; i++)
+    {
+        vector<double> qTermVec(queryTermsIdVec[i].second);
+        vector<pair<int ,double> > nearestIdVecs;
+        nearestTerm2Vec(qTermVec , nearestIdVecs);//n(50,100) most similar terms
+
+        double totalSc =0;
+        for(int j = 0 ;j < nearestIdVecs.size() ; j++)
+        {
+            double sc = exp(nearestIdVecs[j].second);
+            totalSc+=sc;
+
+            //probWordVec.push_back(make_pair<double, int> (sc, nearestIdVecs[j].first ) );
+            temp.push_back(make_pair<double, int> (sc, nearestIdVecs[j].first ) );
+        }
+
+        for(int j = 0 ; j < tops4EachQueryTerm ; j++)
+        {
+            temp[j].first /= totalSc;
+
+            idScore[temp[j].second] += temp[j].first;
+        }
+
+
+        //for(int ii = i * tops4EachQueryTerm ; ii < probWordVec.size() ; ii++)
+            //probWordVec[ii].first /= totalSc;
+        //cerr<<ind.term(queryTermsIdVec[i].first)<<" ";
+    }
+    map<int, double>::iterator mit ;
+    for(mit = idScore.begin() ; mit != idScore.end() ;++mit)
+    {
+        probWordVec.push_back(make_pair<double,int>(mit->second, mit->first) );
+    }
+
+
+    std::sort(probWordVec.begin() , probWordVec.end() , pairCompare);// can use top n selecting algorithm O(n)
     /*cerr<<" ::: ";
     for(int i = 0 ; i < probWordVec.size() ;i ++)
         cerr<< ind.term(probWordVec[i].second)<<" ";

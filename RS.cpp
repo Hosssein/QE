@@ -144,7 +144,6 @@ int main(int argc, char * argv[])
 
         break;
     }
-
     Index *ind = IndexManager::openIndex(indexPath);// with StopWord && stemmed
 
     //writeDocs2File(ind);
@@ -185,7 +184,7 @@ void computeRSMethods(Index* ind)
     string methodName = "_QE_W2V_M:CombSUM_Stemmed_NoSW_";
 
     outFilename += methodName;
-    outFilename += "_CsT_NumbersT_CoefT_#topPos:{50,100}_topPerQW{10,25}";////#topPosW:30-30(0)
+    outFilename += "_CsT_NumbersT_CoefT_#topPosPerQW:{50,100}_topPerQuery{10,25}";////#topPosW:30-30(0)
 
     ofstream out(outFilename.c_str());
 
@@ -206,21 +205,21 @@ void computeRSMethods(Index* ind)
                     //double topPos = 30.0;
                     //double fbCoef = 0.2;//lambda
 
-                    for(double c1 = 0.10 ; c1<=0.36 ;c1+=0.05)//inc//6
+                    for(double c1 = 0.10 ; c1<=0.36 ;c1+=0.06)//inc//
                         //    double c1 = 0.30;
                     {
                         myMethod->setC1(c1);
-                        for(double c2 = 0.01 ; c2 <= 0.2 ; c2+=0.03)//dec //7
+                        for(double c2 = 0.01 ; c2 <= 0.2 ; c2+=0.05)//dec //
                             //    double c2 = 0.05;
                         {
                             //myMethod->setThreshold(init_thr);
                             myMethod->setC2(c2);
 
-                            for(int numOfShownNonRel = 4;numOfShownNonRel< 11;numOfShownNonRel+=3 )//3
+                            for(int numOfShownNonRel = 3;numOfShownNonRel< 8;numOfShownNonRel+=3 )//2
                                 //int numOfShownNonRel = 5;
                             {
 
-                                for(int numOfnotShownDoc = 100 ;numOfnotShownDoc <= 501 ; numOfnotShownDoc+=100)//4
+                                for(int numOfnotShownDoc = 100 ;numOfnotShownDoc <= 401 ; numOfnotShownDoc+=100)//4
                                     //int numOfnotShownDoc = 500;
                                 {
                                     myMethod->setThreshold(thresh);
@@ -233,7 +232,7 @@ void computeRSMethods(Index* ind)
 
 
                                     cout<<"c1: "<<c1<<" c2: "<<c2<<" numOfShownNonRel: "<<numOfShownNonRel<<" numOfnotShownDoc: "<<numOfnotShownDoc<<" "<<endl;
-                                    resultPath = resultFileNameHM.c_str() +numToStr( myMethod->getThreshold() )+"_c1:"+numToStr(c1)+"_c2:"+numToStr(c2)+"_#showNonRel:"+numToStr(numOfShownNonRel)+"_#notShownDoc:"+numToStr(numOfnotShownDoc)+"#topPosW:"+numToStr(myMethod->tops4EachQueryTerm)+"#topNegW:"+numToStr(myMethod->numberOfNegativeSelectedTopWord);
+                                    resultPath = resultFileNameHM.c_str() +numToStr( myMethod->getThreshold() )+"_c1:"+numToStr(c1)+"_c2:"+numToStr(c2)+"_#showNonRel:"+numToStr(numOfShownNonRel)+"_#notShownDoc:"+numToStr(numOfnotShownDoc)+"#topPosQT:"+numToStr(myMethod->tops4EachQueryTerm);
                                     resultPath += "fbCoef:"+numToStr(fbCoef)+methodName+"_NoCsTuning_NoNumberT"+"_topSelectedWord:"+numToStr(SelectedWord4Q)+".res";
 
 
