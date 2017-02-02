@@ -990,20 +990,22 @@ public:
         tops4EachQueryTerm = n;
     }
 
-    bool *relComputed;
-    bool *nonRelComputed;
+    //bool *relComputed;
+    //bool *nonRelComputed;
     int W2VecDimSize;
-    double alphaCoef,lambdaCoef,etaCoef,betaCoef;
+    //double alphaCoef,lambdaCoef,etaCoef,betaCoef;
     //double **coefMatrix;
     //vector<vector<double> >coefMatrix(100,vector<double>(100));
-    vector<vector<double> >coefMatrix;
+    //vector<vector<double> >coefMatrix;
     //vector<double> queryAvgVec;
     vector<double> Vq;
     vector<vector<double> > Vwn ,Vbwn;
     double /*numberOfPositiveSelectedTopWord,*/numberOfNegativeSelectedTopWord;
 
+    double alphaCoef;
     double tops4EachQuery;
     double tops4EachQueryTerm;
+    double topsCinRM1;
 
 
     vector<int> initRel;

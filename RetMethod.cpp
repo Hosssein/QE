@@ -225,8 +225,8 @@ lemur::retrieval::RetMethod::RetMethod(const Index &dbIndex,
 
 
 
-    qryParam.fbMethod = RetParameter::MIXTURE;
-    RM="MIX";// *** Query Likelihood adjusted score method *** //
+    qryParam.fbMethod = RetParameter::RM1;
+    RM="RM1";// *** Query Likelihood adjusted score method *** //
     qryParam.fbCoeff = RetParameter::defaultFBCoeff;//default = 0.5
     //qryParam.fbCoeff =0.1;
     qryParam.fbPrTh = RetParameter::defaultFBPrTh;
@@ -258,25 +258,25 @@ lemur::retrieval::RetMethod::RetMethod(const Index &dbIndex,
             coefMatrix[i][j]=((rand()%2000)-1000)/1000.0f;
     */
     W2VecDimSize = 100;
-    coefMatrix.resize(W2VecDimSize);
-    for(int i = 0 ;i < W2VecDimSize ; i++)
-        coefMatrix[i].resize(W2VecDimSize);
+    //coefMatrix.resize(W2VecDimSize);
+    //for(int i = 0 ;i < W2VecDimSize ; i++)
+    //    coefMatrix[i].resize(W2VecDimSize);
 
-    for(int i = 0 ;i < W2VecDimSize ; i++)
-        for(int j = 0 ; j < W2VecDimSize ; j++)
-        {
-            coefMatrix[i][j] = ((rand()%2000)-1000)/1000.0f;
+    //for(int i = 0 ;i < W2VecDimSize ; i++)
+    //    for(int j = 0 ; j < W2VecDimSize ; j++)
+    //    {
+    //        coefMatrix[i][j] = ((rand()%2000)-1000)/1000.0f;
             //cerr<<coefMatrix[i][j]<<" ";
-        }
+    //    }
     /*alphaCoef = 0.8;
     lambdaCoef = 0.05;
     betaCoef = 0.01;
     etaCoef = 0.0000001;*/
 
-    alphaCoef = 0.8;
-    lambdaCoef = 0.05;
-    betaCoef = 0.01;
-    etaCoef =0.000001;
+    //alphaCoef = 0.8;
+    //lambdaCoef = 0.05;
+    //betaCoef = 0.01;
+    //etaCoef =0.000001;
     //queryAvgVec.assign(W2VecDimSize , -10.0);
     Vq.assign(W2VecDimSize , 0.0);
     //Vbwn.assign(W2VecDimSize , 0.0);
@@ -472,6 +472,19 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 #define COMBSUM 1
 #define COMBMNZ 0
 #define COMBMAX 0
+#define RMONE 0
+#if RMONE
+    IndexedRealVector rel;
+    for (int i =0 ; i<relJudgDoc.size() ; i++)
+    {
+        rel.PushValue(relJudgDoc[i],0);
+    }
+    PseudoFBDocs  *relDocs;
+    relDocs= new PseudoFBDocs(rel,relJudgDoc.size(),true);
+
+    updateTextQuery(origRep, *relDocs ,*relDocs);
+
+#endif
 
 #if COMBMAX
     vector<pair<double, int> >probWordVec;
@@ -506,7 +519,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
 
         //for(int ii = i * tops4EachQueryTerm ; ii < probWordVec.size() ; ii++)
-            //probWordVec[ii].first /= totalSc;
+        //probWordVec[ii].first /= totalSc;
         //cerr<<ind.term(queryTermsIdVec[i].first)<<" ";
     }
     map<int, double>::iterator mit ;
@@ -532,6 +545,9 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
     lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
     qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
+
+    delete fblm;
+
 
 #endif
 #if COMBMNZ
@@ -571,7 +587,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
 
         //for(int ii = i * tops4EachQueryTerm ; ii < probWordVec.size() ; ii++)
-            //probWordVec[ii].first /= totalSc;
+        //probWordVec[ii].first /= totalSc;
         //cerr<<ind.term(queryTermsIdVec[i].first)<<" ";
     }
     map<int, double>::iterator mit ;
@@ -598,6 +614,9 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
     lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
     qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
+
+    delete fblm;
+
 
 #endif
 
@@ -627,14 +646,10 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
         for(int j = 0 ; j < tops4EachQueryTerm ; j++)
         {
             temp[j].first /= totalSc;
-
             idScore[temp[j].second] += temp[j].first;
         }
 
 
-        //for(int ii = i * tops4EachQueryTerm ; ii < probWordVec.size() ; ii++)
-            //probWordVec[ii].first /= totalSc;
-        //cerr<<ind.term(queryTermsIdVec[i].first)<<" ";
     }
     map<int, double>::iterator mit ;
     for(mit = idScore.begin() ; mit != idScore.end() ;++mit)
@@ -660,6 +675,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
     qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
 
+    delete fblm;
 #endif
 #if CENTROID
     //cosWithAvg(Centroid)
@@ -733,132 +749,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     delete fblm;
     //delete qr;
 #endif
-#if 0
-    //relJudgDoc.insert(relJudgDoc.end(),initRel.begin(),initRel.end());
-    IndexedRealVector rel;
-    for (int i =0 ; i<relJudgDoc.size() ; i++)
-    {
-        rel.PushValue(relJudgDoc[i],0);
-    }
-    PseudoFBDocs  *relDocs;
-    relDocs= new PseudoFBDocs(rel,relJudgDoc.size(),true);
 
-    /*relDocs->startIteration();
-    while(relDocs->hasMore())
-    {
-        int a;
-        double b;
-        relDocs->nextIDInfo(a,b);
-    }*/
-    updateTextQuery(origRep, *relDocs ,*relDocs);
-#endif
-
-#if 0 //clustered
-
-    map<int, vector<double> >::iterator endIt = wordEmbedding.end();
-
-
-    vector<pair<double, int> >selectedWordProbId;
-    vector<pair<double, int> >probWordVec;
-    lemur::langmod::DocUnigramCounter *dCounter;
-    dCounter = new lemur::langmod::DocUnigramCounter(relJudgDoc, ind);
-
-    //ofstream write ("QueryWord-expanded-terms.txt", fstream::app);
-
-    //cerr<<queryTermsIdVec.size()<<" "<<ind.term("marchandis")<<" ";
-    //while(clustering)
-    for(int i = 0 ; i < queryTermsIdVec.size() ; i++)
-    {
-
-    }
-
-    for(int ii = 0 ; ii < queryTermsIdVec.size() ; ii++)
-    {
-        //cerr<< ind.term( queryTermsIdVec[ii].first ) <<" ";
-
-        probWordVec.clear();
-
-        dCounter->startIteration();
-        while(dCounter->hasMore())
-        {
-            int eventInd;
-            double weight;
-            dCounter->nextCount(eventInd,weight);
-
-            map<int, vector<double> >::iterator tempit = wordEmbedding.find(eventInd);
-            if( tempit != endIt )
-            {
-                vector<double> tt = tempit->second;
-                //vector<double> tt = wordEmbedding[eventInd];
-
-
-                double sc = cosineSim(queryTermsIdVec[ii].second , tt);
-                //float sc = softMaxFunc(Vq , tt);
-                //float sc = softMaxFunc2(Vq , tt);
-
-                //cerr<<"sc: "<<sc<<" "<<ind.term(eventInd)<<endl;
-
-                sc += 1.0;//[-1:1]-->[0:2]
-                probWordVec.push_back(pair<double,int>( sc , eventInd));// can be select from Coll !!!!
-            }
-        }
-
-        double total_sc= 0.0;
-
-        //cerr<<"\nQUERY_TERM: "<<ind.term(queryTermsIdVec[ii].first)<<endl;
-        for(int i = 0 ; i < probWordVec.size() ; i++)
-        {
-            int cc = dCounter->count(probWordVec[i].second );
-            double score_ = log(1+cc)* exp(2.0*probWordVec[i].first);
-
-
-            probWordVec[i].first =  score_ ;
-            total_sc += score_;
-        }
-        for(int i = 0 ; i < probWordVec.size() ; i++)
-            probWordVec[i].first /= total_sc;
-
-
-        std::sort(probWordVec.begin() , probWordVec.end() , pairCompare);// can use top n selecting algorithm O(n)
-
-
-        int cc = -1;
-        if(numberOfTopSelectedWord4EacQword < probWordVec.size())
-            cc = numberOfTopSelectedWord4EacQword;
-        else
-            cc = probWordVec.size();
-        //int cc = probWordVec.size();
-        //write<<ind.term(queryTermsIdVec[ii].first)<<"-> "<<endl;
-        for(int i = 0 ; i < cc ; i++)
-        {
-            selectedWordProbId.push_back( probWordVec[i] );
-
-            //write <<"( "<<ind.term(probWordVec[i].second) << " "<< probWordVec[i].first <<") , ";
-        }
-
-        //write<<endl<<endl;
-    }//end-for
-    //write.close();
-
-
-    COUNT_T numTerms = ind.termCountUnique();
-    lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
-
-    int countPos = selectedWordProbId.size();
-    for (int i = 0; i < countPos; i++)
-    {
-        lmCounter.incCount(selectedWordProbId[i].second , selectedWordProbId[i].first);
-    }
-
-    QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
-    lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
-    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
-
-    delete dCounter;
-    delete fblm;
-    //delete qr;
-
-#endif
 
 #if 0
     //log-logistic
@@ -1171,22 +1062,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     delete fblm;
     //delete qr;
 #endif
-#if 0
-    cerr<<"relJudgDoc size: "<<relJudgDoc.size()<<" nonRelJudgDoc size: "<<nonRelJudgDoc.size()<<endl;
-    if(relComputed[relJudgDoc.size()] == false)
-    {
-        relComputed[relJudgDoc.size()] = true;
-        relJudgDoc.insert(relJudgDoc.end(),initRel.begin(),initRel.end());
-        cerr<<"After1: relJudgDoc size: "<<relJudgDoc.size()<<" nonRelJudgDoc size: "<<nonRelJudgDoc.size()<<endl;
-        computeRelNonRelDist(origRep,relJudgDoc ,nonRelJudgDoc,true,true);
-    }else if(nonRelComputed[nonRelJudgDoc.size()] == false)
-    {
-        nonRelComputed[nonRelJudgDoc.size()] = true;
-        nonRelJudgDoc.insert(nonRelJudgDoc.end(), initNonRel.begin(),initNonRel.end());
-        cerr<<"After2: relJudgDoc size: "<<relJudgDoc.size()<<" nonRelJudgDoc size: "<<nonRelJudgDoc.size()<<endl;
-        computeRelNonRelDist(origRep,relJudgDoc ,nonRelJudgDoc,false,true);
-    }
-#endif
+
 }
 
 
@@ -1916,23 +1792,25 @@ void lemur::retrieval::RetMethod::computeMarkovChainFBModel(QueryModel &origRep,
 void lemur::retrieval::RetMethod::computeRM1FBModel(QueryModel &origRep,
                                                     const DocIDSet &relDocs,const DocIDSet &nonRelDocs)
 {
+#define RM1SUM 1
+#define RM1MNZ 0
+#define RM1MAX 0
+
+
+    ///compute p_clip(t|RM1)
+    ///
+
     COUNT_T numTerms = ind.termCountUnique();
 
     // RelDocUnigramCounter computes SUM(D){P(w|D)*P(D|Q)} for each w
     lemur::langmod::RelDocUnigramCounter *dCounter = new lemur::langmod::RelDocUnigramCounter(relDocs, ind);
-    //lemur::langmod::RelDocUnigramCounter *nCounter = new lemur::langmod::RelDocUnigramCounter(nonRelDocs, ind);
 
     double *distQuery = new double[numTerms+1];
-    //double *negDistQuery = new double[numTerms+1];
     double expWeight = qryParam.fbCoeff;
 
-    //double negWeight = 0.5;
-
     TERMID_T i;
-    for (i=1; i<=numTerms;i++){
+    for (i=1; i<=numTerms;i++)
         distQuery[i] = 0.0;
-        //negDistQuery[i] = 0.0;
-    }
 
     double pSum=0.0;
     dCounter->startIteration();
@@ -1943,50 +1821,115 @@ void lemur::retrieval::RetMethod::computeRM1FBModel(QueryModel &origRep,
         distQuery[wd]=wdPr;
         pSum += wdPr;
     }
-    /*double nSum=0.0;
-    nCounter->startIteration();
-    while (nCounter->hasMore()) {
-        int wd; // dmf FIXME
-        double wdPr;
-        nCounter->nextCount(wd, wdPr);
-        negDistQuery[wd]=wdPr;
-        nSum += wdPr;
-    }*/
-
 
     for (i=1; i<=numTerms;i++) {
-        //REMOVE  2 *
-        //if(feedbackMode == 2)
-        {
-            //cout<<"normalFB"<<endl;
-            distQuery[i] = expWeight*distQuery[i]/pSum +
-                    (1-expWeight)*ind.termCount(i)/ind.termCount();
-
-        }/*else if(feedbackMode == 1)
-        {
-            cout<<"ourFB"<<endl;
-            distQuery[i] =  expWeight*(getNegWeight()*(distQuery[i]/pSum)-(1-getNegWeight())*(negDistQuery[i]/nSum) )+
-                    (1-expWeight)*ind.termCount(i)/ind.termCount();
-        }*/
-
-        lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
-        for (i=1; i<=numTerms; i++) {
-            if (distQuery[i] > 0) {
-                lmCounter.incCount(i, distQuery[i]);
-            }
-        }
-
-        //cout<<"sum: "<<lmCounter.sum()<<endl;
-
-        lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
-        origRep.interpolateWith(*fblm, 0.0, qryParam.fbTermCount,
-                                qryParam.fbPrSumTh, 0.0);
-        delete fblm;
-        delete dCounter;
-        //delete nCounter;
-        delete[] distQuery;
-        //delete[] negDistQuery;
+        distQuery[i] = expWeight*distQuery[i]/pSum +
+                (1-expWeight)*ind.termCount(i)/ind.termCount();
     }
+
+    lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
+    for (i=1; i<=numTerms; i++) {
+        if (distQuery[i] > 0) {
+            lmCounter.incCount(i, distQuery[i]);
+        }
+    }
+
+    /***/
+    vector<pair<double ,int> >probIdVec;
+    lmCounter.startIteration();
+    while(lmCounter.hasMore())
+    {
+        int id;
+        double wdPr;
+        lmCounter.nextCount(id,wdPr);
+        probIdVec.push_back(make_pair<double,int>(wdPr , id));
+    }
+    std::sort(probIdVec.begin(), probIdVec.end() ,pairCompare);
+
+    double totalSc = 0;
+    for(int i = 0 ; i < topsCinRM1 ;i++)
+        totalSc += probIdVec[i].first;
+
+    lemur::utility::ArrayCounter<double> myLmCounter(numTerms+1);
+    for(int i = 0 ; i < topsCinRM1 ;i++)
+        myLmCounter.incCount(probIdVec[i].second, (probIdVec[i].first/totalSc) );
+
+    /***/
+
+    //lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(myLmCounter, ind.termLexiconID());
+    //origRep.interpolateWith(*fblm, 0.0, qryParam.fbTermCount,
+    //        qryParam.fbPrSumTh, 0.0);
+    //delete fblm;
+
+    delete dCounter;
+    delete[] distQuery;
+    ///end compute p_clip(t|RM1)
+
+
+#if RM1SUM
+    /// compute p(.|M)
+    vector<pair<double, int> >probWordVec;
+    map<int, double> idScore;
+    for(int i = 0 ; i < queryTermsIdVec.size() ; i++)
+    {
+        vector<pair<double, int> >temp;
+        vector<double> qTermVec(queryTermsIdVec[i].second);
+        vector<pair<int ,double> > nearestIdVecs;
+
+        nearestTerm2Vec(qTermVec , nearestIdVecs);//n(50,100) most similar terms
+
+        double totalSc =0;
+        for(int j = 0 ;j < nearestIdVecs.size() ; j++)
+        {
+            double sc = exp(nearestIdVecs[j].second);
+            totalSc+=sc;
+            temp.push_back(make_pair<double, int> (sc, nearestIdVecs[j].first ) );
+        }
+        for(int j = 0 ; j < tops4EachQueryTerm ; j++)// hamun topsCinRM1 hast
+        {
+            temp[j].first /= totalSc;
+            idScore[temp[j].second] += temp[j].first;
+        }
+    }
+    map<int, double>::iterator mit ;
+    for(mit = idScore.begin() ; mit != idScore.end() ;++mit)
+    {
+        probWordVec.push_back(make_pair<double,int>(mit->second, mit->first) );
+    }
+
+    std::sort(probWordVec.begin() , probWordVec.end() , pairCompare);// can use top n selecting algorithm O(n)
+
+    //COUNT_T numTerms = ind.termCountUnique();
+    lemur::utility::ArrayCounter<double> welmCounter(numTerms+1);
+
+    for (int i = 0; i < tops4EachQuery; i++)//v
+        welmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
+
+    //QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
+    //lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(welmCounter, ind.termLexiconID());
+    //qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
+#endif
+    ///interpolate
+
+    for (i=1; i<=numTerms; i++)
+    {
+        double prob =  myLmCounter.count(i) * alphaCoef + (1-alphaCoef) * welmCounter.count(i);
+        probWordVec.push_back(make_pair<double, int>(prob,i));
+    }
+    std::sort(probWordVec.begin() , probWordVec.end() , pairCompare);// can use top n selecting algorithm O(n)
+
+    lemur::utility::ArrayCounter<double> interpolateLmCounter(numTerms+1);
+    for(int i = 0 ; i< tops4EachQuery ; i++)
+    {
+        interpolateLmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
+    }
+
+    QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
+    lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(interpolateLmCounter, ind.termLexiconID());
+    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
+
+    ///end compute p(.|M)
+
 }
 void lemur::retrieval::RetMethod::computeRM3FBModel(QueryModel &origRep,
                                                     const DocIDSet &relDocs)
