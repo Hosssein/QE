@@ -183,10 +183,10 @@ void computeRSMethods(Index* ind)
 
 #define UpProf  1
 #define COMPAVG 1
-    string methodName = "_QE_W2V_M:CombSUM_Stemmed_NoSW_";
+    string methodName = "_QE_W2V_M:CombSum_Stemmed_NoSW_";
 
     outFilename += methodName;
-    outFilename += "_NoCsT_NoNumbersT_CoefT[.05-1.0(.3)]_#topPosPerQW:{50,100}_topPerQuery{10,25}";////#topPosW:30-30(0)
+    outFilename += "_HalfCsT_HalfNumbersT_CoefT[.05-1.0(.1)]_#topPerQueryWord:{50-100(50)}_#topPerQuery:{10-40(10)}";//// #topPosW:30-30(0)
 
     ofstream out(outFilename.c_str());
 
@@ -198,33 +198,33 @@ void computeRSMethods(Index* ind)
     double start_thresh =startThresholdHM, end_thresh= endThresholdHM;
 
     for (double thresh = start_thresh ; thresh<=end_thresh ; thresh += intervalThresholdHM)
-        for(double fbCoef = 0.05 ; fbCoef <=1.01 ; fbCoef+=0.3)//lambda //4
+        for(double fbCoef = 0.05 ; fbCoef <=1.01 ; fbCoef+=0.1)//lambda //
             //for(double alpha = 0.05 ; alpha <=1.01 ;alpha +=0.3)//alpha //for RM1 interpolate //4
-                for(double topPos = 50; topPos <= 100 ; topPos+=50)//n for each query term//c in RM1
-                    for(double SelectedWord4Q = 10; SelectedWord4Q <= 25 ; SelectedWord4Q += 15)//v for each query(whole)
+                for(double topPos = 50; topPos <= 100 ; topPos+=50)//n(50,100) for each query term//c in RM1
+                    for(double SelectedWord4Q = 10; SelectedWord4Q <= 40 ; SelectedWord4Q += 10)//v(10,25) for each query(whole)
                     {
                         //double thresh = startThresholdHM;
-                        //double SelectedWord4Q =15;
-                        //double topPos = 30.0;
-                        //double fbCoef = 0.2;//lambda
-                        double alpha = 0.2;
+                        //double SelectedWord4Q =0;
+                        //double topPos = 0;
+                        //double fbCoef = 0;//lambda
+                        double alpha = 0;
 
                         //for(double c1 = 0.10 ; c1<=0.36 ;c1+=0.06)//inc//5
-                                double c1 = 0.20;
+                                double c1 = 0.30;
                         {
                             myMethod->setC1(c1);
-                            //for(double c2 = 0.01 ; c2 <= 0.2 ; c2+=0.05)//dec //4
-                                    double c2 = 0.04;
+                            for(double c2 = 0.01 ; c2 <= 0.2 ; c2+=0.05)//dec //4
+                                    //double c2 = 0.04;
                             {
                                 //myMethod->setThreshold(init_thr);
                                 myMethod->setC2(c2);
 
                                 //for(int numOfShownNonRel = 3;numOfShownNonRel< 8;numOfShownNonRel+=3 )//2
-                                    int numOfShownNonRel = 4;
+                                    int numOfShownNonRel = 5;
                                 {
 
-                                    //for(int numOfnotShownDoc = 100 ;numOfnotShownDoc <= 401 ; numOfnotShownDoc+=100)//4
-                                        int numOfnotShownDoc = 400;
+                                    for(int numOfnotShownDoc = 100 ;numOfnotShownDoc <= 601 ; numOfnotShownDoc+=100)//4
+                                        //int numOfnotShownDoc = 400;
                                     {
                                         myMethod->setThreshold(thresh);
 

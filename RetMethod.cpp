@@ -468,11 +468,16 @@ void lemur::retrieval::RetMethod::nearestTerm2Vec(vector<double> vec ,
 void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRep,
                                                 vector<int> relJudgDoc ,vector<int> nonRelJudgDoc)
 {
+    /**mine methods****/
+#define LOGLOGISTIC 0
+#define COSREL 0
+    /**other methods***/
 #define CENTROID 0
 #define COMBSUM 1
 #define COMBMNZ 0
 #define COMBMAX 0
 #define RMONE 0
+
 #if RMONE
     IndexedRealVector rel;
     for (int i =0 ; i<relJudgDoc.size() ; i++)
@@ -724,7 +729,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     COUNT_T numTerms = ind.termCountUnique();
     lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
 
-    int countPos = min((int)numberOfPositiveSelectedTopWord , (int)probWordVec.size());
+    int countPos = min((int)tops4EachQuery , (int)probWordVec.size());
     /*int countPos = -1;
     if(numberOfPositiveSelectedTopWord < probWordVec.size() )
         countPos = numberOfPositiveSelectedTopWord;
@@ -751,7 +756,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 #endif
 
 
-#if 0
+#if LOGLOGISTIC
     //log-logistic
     vector<pair<double, int> >finalScoreIdVec;
 
@@ -828,8 +833,8 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
 
         int cc=-1;
-        if( numberOfTopSelectedWord4EacQword < finalScoreIdVec.size())
-            cc = numberOfTopSelectedWord4EacQword ;
+        if( tops4EachQueryTerm < finalScoreIdVec.size())
+            cc = tops4EachQueryTerm ;
         else
             cc = finalScoreIdVec.size();
 
@@ -864,7 +869,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
 #endif
 
-#if 0
+#if COSREL
 
     //cosWithQueryTerms
     map<int, vector<double> >::iterator endIt = wordEmbedding.end();
@@ -916,8 +921,10 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
         {
 
 
-            int cc = dCounter->count(probWordVec[i].second );
-            double score_ = log(1+cc)* exp(2.0*probWordVec[i].first);
+
+            //int cc = dCounter->count(probWordVec[i].second );
+            //double score_ = log(1+cc)* exp(2.0*probWordVec[i].first);
+            double score_ = /*log((double)ind.docCount() / (double)ind.docCount(probWordVec[i].first))**/probWordVec[i].first;//pure cos score
             //score_+=1.0; //[-1:1]-->[0:2]
             /*if(ind.term(probWordVec[i].second) == ind.term(queryTermsIdVec[ii].first) )
                 cerr<<ind.term(queryTermsIdVec[ii].first)<<" "<<cc<<" "<<probWordVec[i].first<<" "<<score_<<endl;
@@ -947,8 +954,8 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
 
         int cc = -1;
-        if(numberOfTopSelectedWord4EacQword < probWordVec.size())
-            cc = numberOfTopSelectedWord4EacQword;
+        if(tops4EachQueryTerm < probWordVec.size())
+            cc = tops4EachQueryTerm;
         else
             cc = probWordVec.size();
         //int cc = probWordVec.size();
