@@ -1934,7 +1934,6 @@ void lemur::retrieval::RetMethod::computeRM1FBModel(QueryModel &origRep,
     QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
     lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(interpolateLmCounter, ind.termLexiconID());
     qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
-
     ///end compute p(.|M)
 
 }

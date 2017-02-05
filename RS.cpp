@@ -186,7 +186,7 @@ void computeRSMethods(Index* ind)
     string methodName = "_QE_W2V_M:CombSum_Stemmed_NoSW_";
 
     outFilename += methodName;
-    outFilename += "_HalfCsT_HalfNumbersT_CoefT[.05-1.0(.1)]_#topPerQueryWord:{50-100(50)}_#topPerQuery:{10-40(10)}";//// #topPosW:30-30(0)
+    outFilename += "_CsT_NumbersT_CoefT[.05-1.0(.1)]_#topPerQueryWord:{100-100(10)}_#topPerQuery:{10-30(10)}";//// #topPosW:30-30(0)
 
     ofstream out(outFilename.c_str());
 
@@ -195,35 +195,36 @@ void computeRSMethods(Index* ind)
     cout<< "RSMethod: "<<RETMODE<<" NegGenMode: "<<NEGMODE<<" feedbackMode: "<<FBMODE<<" updatingThrMode: "<<UPDTHRMODE<<"\n";
     cout<<"outfile: "<<outFilename<<endl;
 
+    double oldFmeasure = 0.0 , newFmeasure = 0.0;
     double start_thresh =startThresholdHM, end_thresh= endThresholdHM;
 
     for (double thresh = start_thresh ; thresh<=end_thresh ; thresh += intervalThresholdHM)
-        for(double fbCoef = 0.05 ; fbCoef <=1.01 ; fbCoef+=0.1)//lambda //
+        for(double fbCoef = 0.05 ; fbCoef <=1.01 ; fbCoef+=0.1)//lambda //7
             //for(double alpha = 0.05 ; alpha <=1.01 ;alpha +=0.3)//alpha //for RM1 interpolate //4
-                for(double topPos = 50; topPos <= 100 ; topPos+=50)//n(50,100) for each query term//c in RM1
-                    for(double SelectedWord4Q = 10; SelectedWord4Q <= 40 ; SelectedWord4Q += 10)//v(10,25) for each query(whole)
+                //for( double topPos = 5; topPos <= 50 ; topPos+=10 )//5 //n(50,100) for each query term//c in RM1
+                    for(double SelectedWord4Q = 10; SelectedWord4Q <= 30 ; SelectedWord4Q += 10)//4 //v(10,25) for each query(whole)
                     {
                         //double thresh = startThresholdHM;
                         //double SelectedWord4Q =0;
-                        //double topPos = 0;
+                        double topPos = 100;
                         //double fbCoef = 0;//lambda
                         double alpha = 0;
 
-                        //for(double c1 = 0.10 ; c1<=0.36 ;c1+=0.06)//inc//5
-                                double c1 = 0.30;
+                        for(double c1 = 0.10 ; c1<=0.36 ;c1+=0.06)//inc//5
+                                //double c1 = 0.30;
                         {
                             myMethod->setC1(c1);
-                            for(double c2 = 0.01 ; c2 <= 0.2 ; c2+=0.05)//dec //4
+                            for(double c2 = 0.01 ; c2 <= 0.1 ; c2+=0.02)//dec //5
                                     //double c2 = 0.04;
                             {
                                 //myMethod->setThreshold(init_thr);
                                 myMethod->setC2(c2);
 
-                                //for(int numOfShownNonRel = 3;numOfShownNonRel< 8;numOfShownNonRel+=3 )//2
-                                    int numOfShownNonRel = 5;
+                                for(int numOfShownNonRel = 3;numOfShownNonRel< 8;numOfShownNonRel+=2 )//2
+                                    //int numOfShownNonRel = 5;
                                 {
 
-                                    for(int numOfnotShownDoc = 100 ;numOfnotShownDoc <= 601 ; numOfnotShownDoc+=100)//4
+                                    for(int numOfnotShownDoc=100 ;numOfnotShownDoc <= 301 ; numOfnotShownDoc+=50)//5
                                         //int numOfnotShownDoc = 400;
                                     {
                                         myMethod->setThreshold(thresh);
@@ -419,6 +420,14 @@ void computeRSMethods(Index* ind)
                                         out<<"old_Avg Recall: "<<dd<<endl;
                                         out<<"old_F-measure: "<<(2*pp*dd)/(pp+dd)<<endl<<endl;
 
+
+                                        newFmeasure = (2*avgPrec*avgRecall)/(avgPrec+avgRecall) ;
+                                        if( oldFmeasure - newFmeasure > 2 )
+                                        {
+                                            oldFmeasure = newFmeasure;
+                                            break;
+                                        }
+                                        oldFmeasure = newFmeasure;
 
 
 
