@@ -962,10 +962,6 @@ protected:
                            const lemur::api::DocIDSet & relDocs);
     void computeRM4FBModel(QueryModel &origRep,
                            const lemur::api::DocIDSet & relDocs);
-
-
-
-
     void computeNearestTerm2Vec(vector<double>);
     void nearestTerm2Vec(vector<double>, vector<pair<int, double> > &nearestTerm);
     //@}

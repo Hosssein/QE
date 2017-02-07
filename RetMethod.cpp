@@ -48,6 +48,8 @@ extern map<int,vector<double> >docIdKeyWords;
 extern set<int> stopWords;
 //extern map<int, map<int,double> > FEEDBACKMAP;
 extern vector<pair<int ,vector<double> > > queryTermsIdVec;
+extern vector<pair<int, double> >weightedQueryTerms;
+
 
 static int qid=1;
 static string RM;
@@ -437,6 +439,7 @@ DocumentRep *lemur::retrieval::RetMethod::computeDocRep(DOCID_T docID)
     }
 }
 
+
 void lemur::retrieval::RetMethod::nearestTerm2Vec(vector<double> vec ,
                                                   vector<pair<int,double> > &nearestTerm)
 {
@@ -451,7 +454,8 @@ void lemur::retrieval::RetMethod::nearestTerm2Vec(vector<double> vec ,
         else
             continue;
 
-        double sim = this->cosineSim(vec,dtemp);
+        //double sim = this->cosineSim(vec,dtemp);
+        double sim = this->softMaxFunc(vec,dtemp);
         simTermid.push_back(pair<double,int>(sim,i));
     }
     std::sort(simTermid.begin() , simTermid.end(),pairCompare);
@@ -469,11 +473,11 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
                                                 vector<int> relJudgDoc ,vector<int> nonRelJudgDoc)
 {
     /**mine methods****/
-#define LOGLOGISTIC 0
+#define LOGLOGISTIC 1
 #define COSREL 0
     /**other methods***/
 #define CENTROID 0
-#define COMBSUM 1
+#define COMBSUM 0
 #define COMBMNZ 0
 #define COMBMAX 0
 #define RMONE 0
@@ -626,6 +630,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 #endif
 
 #if COMBSUM
+
     vector<pair<double, int> >probWordVec;
     map<int, double> idScore;
 
@@ -651,6 +656,10 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
         for(int j = 0 ; j < tops4EachQueryTerm ; j++)
         {
             temp[j].first /= totalSc;
+
+            //temp[j].first *= log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[i].first) );
+            temp[j].first *= weightedQueryTerms[i].second;
+
             idScore[temp[j].second] += temp[j].first;
         }
 
@@ -757,6 +766,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
 
 #if LOGLOGISTIC
+
     //log-logistic
     vector<pair<double, int> >finalScoreIdVec;
 
@@ -794,6 +804,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
                 {
                     vector<double> tt = tempit->second;
                     double sc = cosineSim(queryTermsIdVec[ii].second , tt);
+                    //double sc = softMaxFunc(queryTermsIdVec[ii].second , tt);
 
                     double TF = weight;
                     double docLength = ind.docLength( relJudgDoc[i] );
@@ -804,7 +815,19 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
                     double score_ = log(( tf_w + lambda_w )/lambda_w );
 
                     score_ *= exp(sc+1.0); // [-1:1]->[0:2]
+
+
                     totalScore += score_;
+
+                    //cerr<< log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) )<<" ";
+                    //score_ *=score_;
+                    //cerr<< score_ <<" "<<log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) )<<"\n";
+                    //sleep(2);
+                    score_ *= log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) ) /(log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) )+1 ) ;
+                    //cerr << score_ <<" "<<weightedQueryTerms[ii].second<<" ";
+                    //score_ *= weightedQueryTerms[ii].second;
+                    //cerr<<weightedQueryTerms[ii].first << " "<<ii<<" "<<queryTermsIdVec[ii].first;
+                    //cerr<<score_<<endl;
 
                     map<int , double >::iterator fit = idProbMap.find(eventInd);
                     if(fit != endMapIt)
@@ -841,7 +864,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
         //int cc = finalScoreIdVec.size();
         for(int i = 0 ; i < cc ; i++)
         {
-            selectedWordProbId.push_back(make_pair<double,int>(finalScoreIdVec[i].first , finalScoreIdVec[i].second) );
+            selectedWordProbId.push_back(make_pair<double,int>(finalScoreIdVec[i].first, finalScoreIdVec[i].second) );
             //write <<"( "<<ind.term(finalScoreIdVec[i].second) << " "<< finalScoreIdVec[i].first <<") , ";
             //cerr<<"( "<<ind.term(finalScoreIdVec[i].second) << " "<< finalScoreIdVec[i].first <<") , ";
         }
