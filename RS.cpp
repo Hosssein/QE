@@ -157,7 +157,8 @@ int main(int argc, char * argv[])
 
     readWordEmbeddingFile(ind);
 
-    loadJudgment();
+    loadJudgment();    //110,134,147 rel nadaran va hazf shan
+
     computeRSMethods(ind);
 #endif
 
@@ -185,10 +186,10 @@ void computeRSMethods(Index* ind)
 
 #define UpProf  1
 #define COMPAVG 1
-    string methodName = "_QE_W2V_M:LOGLOGISTIC*(IDF/IDF+1)_Stemmed_NoSW_";
+    string methodName = "_QE_W2V_M:CentroidOnRelJudg_EXP(cos)_khali_WeightedAvg_Stemmed_NoSW_";//RM1(c=n=100)
 
     outFilename += methodName;
-    outFilename += "_CsT_NumbersT_CoefT[0.05]_#topPerQueryWord:{5-25(10)}";//_#topPerQuery:{10-30(15)}// #topPosW:30-30(0)
+    outFilename += "_NoCsT_NoNumbersT_.2-.04-4-400__lambda[0.05-1(0.1)]___#topPerQuery:{10-25(15)}";//#topPerQueryWord:{(50,100)}//alpha[0.05-1(0.1)]//c(50,100)_//#topPerQuery:{10-30(15)}// #topPosW:30-30(0)
 
     ofstream out(outFilename.c_str());
 
@@ -201,36 +202,36 @@ void computeRSMethods(Index* ind)
     double start_thresh =startThresholdHM, end_thresh= endThresholdHM;
 
     for (double thresh = start_thresh ; thresh<=end_thresh ; thresh += intervalThresholdHM)
-        //for(double fbCoef = 0.05 ; fbCoef <=1.01 ; fbCoef+=0.15)//lambda //7
+        for(double fbCoef = 0.05 ; fbCoef <=1.01 ; fbCoef+=0.1)//lambda //10
     {
-        //for(double alpha = 0.05 ; alpha <=1.01 ;alpha +=0.3)//alpha //for RM1 interpolate //4
+        //for(double alpha = 0.05 ; alpha <=1.01 ;alpha +=0.1)//alpha //for RM1 interpolate //4
         {
-            for( double topPos = 5; topPos <= 25 ; topPos+=10 )//3//15 khube //n(50,100) for each query term//c in RM1
+            //for( double topPos = 50; topPos <= 100 ; topPos += 50 )//3//15 khube //n(50,100) for each query term//c in RM1
             {
-                //for(double SelectedWord4Q = 10; SelectedWord4Q <= 30 ; SelectedWord4Q += 15)//3 //v(10,25) for each query(whole)
+                for(double SelectedWord4Q = 10; SelectedWord4Q <= 25 ; SelectedWord4Q += 15)//3 //v(10,25) for each query(whole)
                 {
                     //double thresh = startThresholdHM;
-                    double SelectedWord4Q = 0;//10;
-                    //double topPos = 100;//25;
-                    double fbCoef = 0.05;//lambda
-                    double alpha = 0;
+                    //double SelectedWord4Q = 25;
+                    double topPos = 100;//n//c in rm1
+                    //double fbCoef = 0.5;//lambda
+                    double alpha = 0.5;
 
-                    for(double c1 = 0.10 ; c1< 0.36 ;c1+=0.08)//inc//4
-                    //double c1 = 0.10;
+                    //for(double c1 = 0.10 ; c1< 0.36 ;c1+=0.08)//inc//4
+                    double c1 = 0.2;
                     {
                         myMethod->setC1(c1);
-                        for(double c2 = 0.01 ; c2 < 0.1 ; c2+=0.03)//dec //3
-                        //double c2 = 0.01;
+                        //for(double c2 = 0.01 ; c2 < 0.1 ; c2+=0.03)//dec //3
+                        double c2 = 0.04;
                         {
                             //myMethod->setThreshold(init_thr);
                             myMethod->setC2(c2);
 
-                            for(int numOfShownNonRel = 2;numOfShownNonRel< 7;numOfShownNonRel+=3 )//2
-                            //int numOfShownNonRel = 2;
+                            //for(int numOfShownNonRel = 2;numOfShownNonRel< 7;numOfShownNonRel+=3 )//2
+                            int numOfShownNonRel = 4;
                             {
 
-                                for(int numOfnotShownDoc=100 ;numOfnotShownDoc <= 501 ; numOfnotShownDoc+=100)//5
-                                //int numOfnotShownDoc = 100;
+                                //for(int numOfnotShownDoc=100 ;numOfnotShownDoc <= 501 ; numOfnotShownDoc+=100)//5
+                                int numOfnotShownDoc = 400;
                                 {
                                     myMethod->setThreshold(thresh);
 
@@ -304,6 +305,7 @@ void computeRSMethods(Index* ind)
                                         vector<int> docids = queryDocList(ind,((TextQueryRep *)(qr)));
 
                                         cout<<"reldocsize: "<<relDocs.size()<<endl;
+                                        cerr<<"docs size: "<<docids.size();
 
                                         for(int i = 0 ; i<docids.size(); i++) //compute for docs which have queryTerm
                                         {
@@ -312,9 +314,13 @@ void computeRSMethods(Index* ind)
                                             float sim = myMethod->computeProfDocSim(((TextQueryRep *)(qr)) ,docID, relJudgDocs , nonRelJudgDocs , newNonRel,newRel);
 
 
+                                            //if(ind->document(docID) == "afp.com-20041224T051244Z-TX-SGE-RJA37.xml" || ind->document(docID) == "afp.com-20040805T041909Z-TX-SGE-SSB01.xml")
+                                            //    cerr<<sim<<endl;
+
+                                            //cerr<<myMethod->getThreshold()<<" ";
                                             if(sim >=  myMethod->getThreshold() )
                                             {
-                                                //cerr<<sim<<"\n";
+
                                                 numberOfNotShownDocs=0;
                                                 bool isRel = false;
 
@@ -516,7 +522,7 @@ void loadJudgment()
     infile.close();
 
 
-    //110,134,147 rel nadaran
+    //110,134,147 rel nadaran--> hazf shodan
     /*map<string , vector<string> >::iterator it;
     for(it = queryRelDocsMap.begin();it!= queryRelDocsMap.end() ; ++it)
         cerr<<it->first<<endl;*/
@@ -705,6 +711,7 @@ void readWordEmbeddingFile(Index *ind)
     if(WHO == 0)
     {
         in.open("/home/iis/Desktop/Edu/thesis/wordEmbeddingVector/infile_docs_Stemmed_withoutSW_W2V.vectors");
+        //in.open("/home/iis/Desktop/RS-Framework/QE/QE/infile_docs_Stemmed_withoutSW_W2V.vectors");//server 69
         //ifstream in("/home/hossein/Desktop/IIS/Lemur/DataSets/wordEmbeddingVector/infile_vectors_100D_W2V.txt");
 
     }else
@@ -848,7 +855,6 @@ void computeQueryAvgVec(Document *d,RetMethod *myMethod )
 {
 #if 1
 
-    //not weighted(no for!)
     queryTermsIdVec.clear();
 
     TextQuery *q = new TextQuery(*d);
@@ -867,9 +873,8 @@ void computeQueryAvgVec(Document *d,RetMethod *myMethod )
 
         if(it != endIt)//found
         {
-            //for(int i=0; i < qt->weight() ; i++)   //(<queryW1,<1,2,4>)(queryW1,<1,2,3>)
-
-            queryTermsIdVec.push_back(make_pair<int , vector<double> > (qt->id() ,it->second ) );
+            for(int i=0; i < qt->weight() ; i++)   //(<queryW1,<1,2,4>)(queryW1,<1,2,3>)
+                queryTermsIdVec.push_back(make_pair<int , vector<double> > (qt->id() ,it->second ) );
         }
         else
         {
@@ -883,7 +888,7 @@ void computeQueryAvgVec(Document *d,RetMethod *myMethod )
     delete q;
     //delete textQR;
 #endif
-#if 0//Centroid(AVG)
+#if 1//Centroid(AVG)
     TextQuery *qq = new TextQuery(*d);
     QueryRep *qqr = myMethod->computeQueryRep(*qq);
     TextQueryRep *qtextQR = (TextQueryRep *)(qqr);
@@ -913,10 +918,10 @@ void computeQueryAvgVec(Document *d,RetMethod *myMethod )
     vector<double> queryAvg( myMethod->W2VecDimSize ,0.0);
     for(int i = 0 ; i< queryTerms.size() ; i++)
     {
-        for(int j = 0 ; j < queryTerms[i].size() ; j++)
+        for(int j = 0 ; j < myMethod->W2VecDimSize/*queryTerms[i].size()*/ ; j++)
             queryAvg[j] += queryTerms[i][j];
     }
-    for(int i = 0 ; i < queryAvg.size() ;i++)
+    for(int i = 0 ; i < myMethod->W2VecDimSize/*queryAvg.size()*/ ;i++)
         queryAvg[i] /= (double)(queryTerms.size());
 
     myMethod->Vq.clear();
@@ -934,9 +939,13 @@ void computeQueryAvgVec(Document *d,RetMethod *myMethod )
     double totalSc = 0;
     for(int i = 0 ; i < queryTermsIdVec.size() ; i++)
     {
-        double sc = myMethod->softMaxFunc(queryTermsIdVec[i].second , myMethod->Vq);
+        //double sc = myMethod->softMaxFunc2(queryTermsIdVec[i].second , myMethod->Vq);
+        double sc = myMethod->cosineSim(queryTermsIdVec[i].second , myMethod->Vq);
 
         weightedQueryTerms.push_back(make_pair<int, double>(queryTermsIdVec[i].first , sc));
+
+        //        if(sc < 0 )
+        //            cerr<<"manfiiiiiiiiiiii";
 
         totalSc +=sc;
     }

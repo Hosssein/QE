@@ -963,7 +963,10 @@ protected:
     void computeRM4FBModel(QueryModel &origRep,
                            const lemur::api::DocIDSet & relDocs);
     void computeNearestTerm2Vec(vector<double>);
-    void nearestTerm2Vec(vector<double>, vector<pair<int, double> > &nearestTerm);
+    void nearestTerm2Vec(vector<double>, vector<int>, vector<pair<int, double> > &nearestTerm);
+
+    void computeClipRM1(vector<int> relJudgDoc, TextQueryRep &origRep);
+
     //@}
 
     RetParameter::DocSmoothParam docParam;
