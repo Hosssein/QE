@@ -628,7 +628,7 @@ void lemur::retrieval::RetMethod::computeClipRM1(vector<int> relJudgDoc ,lemur::
     lemur::utility::ArrayCounter<double> sumLmCounter(numTerms+1);
     for (int i = 0; i < topsCinRM1; i++)//c//v
         sumLmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
-    //end CombSum
+    //end
 #endif
 
 #if RM1MNZ
@@ -780,10 +780,10 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
                                                 vector<int> relJudgDoc ,vector<int> nonRelJudgDoc)
 {
     /**mine methods****/
-#define LOGLOGISTIC 0
+#define LOGLOGISTIC 1
 #define COSREL 0
     /**other methods***/
-#define CENTROID 1
+#define CENTROID 0
 #define COMBSUM 0
 #define COMBMNZ 0
 #define COMBMAX 0
@@ -825,7 +825,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
         vector<double> qTermVec(queryTermsIdVec[i].second);
         vector<pair<int ,double> > nearestIdVecs;
-        nearestTerm2Vec(qTermVec , nearestIdVecs);//n(50,100) most similar terms
+        nearestTerm2Vec(qTermVec ,relJudgDoc, nearestIdVecs);//n(50,100) most similar terms
 
         double totalSc =0;
         for(int j = 0 ;j < nearestIdVecs.size() ; j++)
@@ -837,7 +837,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
             temp.push_back(make_pair<double, int> (sc, nearestIdVecs[j].first ) );
         }
 
-        for(int j = 0 ; j < tops4EachQueryTerm ; j++)
+        for(int j = 0 ; j < nearestIdVecs.size()/*tops4EachQueryTerm*/ ; j++)
         {
             temp[j].first /= totalSc;
 
@@ -973,7 +973,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
         }
 
 
-        for(int j = 0 ; j < tops4EachQueryTerm ; j++)
+        for(int j = 0 ; j < nearestIdVecs.size()/*tops4EachQueryTerm*/ ; j++)
         {
             temp[j].first /= totalSc;
 
@@ -1123,8 +1123,8 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
                 {
                     vector<double> tt = tempit->second;
 
-                    //double sc = cosineSim(queryTermsIdVec[ii].second , tt);
-                    double sc = softMaxFunc2(queryTermsIdVec[ii].second , tt);
+                    double sc = cosineSim(queryTermsIdVec[ii].second , tt);
+                    //double sc = softMaxFunc2(queryTermsIdVec[ii].second , tt);
                     //double sc = softMaxFunc(queryTermsIdVec[ii].second , tt);
 
                     double TF = weight;
@@ -1135,24 +1135,11 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
                     double tf_w = TF * log(1 + ((avgl)/docLength) ) ;
                     double score_ = log(( tf_w + lambda_w )/lambda_w );
 
-                    //score_ *= exp(sc); //CHECK IT!!! (+1 removed)// [-1:1]->[0:2]
+                    score_ *= exp(sc); //CHECK IT!!! (+1 removed)// [-1:1]->[0:2]
                     score_ *= sc;
 
-                    //score_ *= weightedQueryTerms[ii].second;
 
                     totalScore += score_;
-
-                    //cerr<< log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) )<<" ";
-                    //score_ *=score_;
-                    //cerr<< score_ <<" "<<log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) )<<"\n";
-                    //sleep(2);
-                    //score_ *= log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) ) /(log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) )+1 ) ;
-                    //cerr << score_ <<" "<<weightedQueryTerms[ii].second<<" ";
-
-
-
-                    //cerr<<weightedQueryTerms[ii].first << " "<<ii<<" "<<queryTermsIdVec[ii].first;
-                    //cerr<<score_<<endl;
 
                     map<int , double >::iterator fit = idProbMap.find(eventInd);
                     if(fit != endMapIt)
@@ -1180,10 +1167,11 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
         double idf2= log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) ) /(log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) )+1 ) ;
         double dist = weightedQueryTerms[ii].second;
         double expdist = exp(dist);
+        double impOfQTerm = 1.0;
 
         for(map<int , double>::iterator it = idProbMap.begin() ; it != idProbMap.end() ; ++it )
         {
-            finalScoreIdVec.push_back( make_pair<double,int>( (it->second  )/totalScore , it->first) );
+            finalScoreIdVec.push_back( make_pair<double,int>( (it->second * impOfQTerm )/totalScore , it->first) );
             //cerr<<it->second<<" "<<weightedQueryTerms[ii].second<<" "<<totalScore<<endl;
             //summ +=it->second;;
         }
@@ -1823,11 +1811,21 @@ void lemur::retrieval::RetMethod::computeNearestTerm2Vec(vector<double> vec )
 void lemur::retrieval::RetMethod::updateThreshold(lemur::api::TextQueryRep &origRep,
                                                   vector<int> relJudgDoc ,vector<int> nonReljudgDoc , int mode)
 {
-    thresholdUpdatingMethod = updatingThresholdMode;
-    //double alpha = 0.3,beta = 0.9;
-    /*   if(thresholdUpdatingMethod == 0)//no updating
-        return;
-    else*/ if(thresholdUpdatingMethod == 1)//linear
+//    cerr<<" "<<numOfPosFB<<" "<<avgPosThr<<" "<<lastPosThr<<endl;
+
+//    double thr = ((numOfPosFB-1)/numOfPosFB)*avgPosThr +((1/numOfPosFB)*lastPosThr);
+//    setThreshold(thr);
+//    cerr<<"thr:"<<thr<<" \n";
+
+//    avgPosThr = (numOfPosFB*avgPosThr+lastPosThr)/(numOfPosFB+1);
+//    numOfPosFB++;
+
+
+//    thresholdUpdatingMethod = updatingThresholdMode;
+//    //double alpha = 0.3,beta = 0.9;
+//       if(thresholdUpdatingMethod == 0)//no updating
+//        return;
+//    else if(thresholdUpdatingMethod == 1)//linear
     {
         if(mode == 0)//non rel passed
         {
@@ -1835,12 +1833,13 @@ void lemur::retrieval::RetMethod::updateThreshold(lemur::api::TextQueryRep &orig
             setThreshold(getThreshold()+getC1());
             //cout<<"mode 0 "<<getThreshold()<<endl;
         }
-        else if(mode == 1)//not showed anything
+        else //if(mode == 1)//not showed anything
         {
             setThreshold( getThreshold()- getC2() );
             //cout<<"mode 1 "<<getThreshold()<<endl;
         }
     }
+
 }
 
 void lemur::retrieval::RetMethod::computeMixtureFBModel(QueryModel &origRep,

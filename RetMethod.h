@@ -725,6 +725,11 @@ public:
 
     virtual vector<double> extractKeyWord(int newDocId);
 
+    virtual void setLastPosThr(double sc)
+    {
+        lastPosThr = sc;
+    }
+
 
     double fangScore( DocIDSet &fbDocs, int docID, bool newNonRel)
     {
@@ -911,6 +916,11 @@ protected:
     double initC1,initC2;
     double diffThrUpdatingParam;//for diff
 
+    double avgPosThr, avgNegThr,lastPosThr;
+
+public:
+    double numOfPosFB,numOfNegFB;
+protected:
     //double *prev_distQuery;
     map <int,double>prev_distQuery;
 
@@ -978,6 +988,16 @@ protected:
 
 public:
 
+    void setIncThrUpdatingParam(double thr)
+    {
+        avgPosThr = thr;
+        avgNegThr =0.0;
+        lastPosThr = 0.0;
+
+        numOfNegFB=0;
+        numOfPosFB=1;
+
+    }
     void setTop4EachQuery(double n)
     {
         tops4EachQuery = n;
