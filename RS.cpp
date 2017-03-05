@@ -86,6 +86,8 @@ vector<pair<int ,vector<double> > > queryTermsIdVec;
 
 vector<double> relScores,nonRelScores;
 
+int lastNewRelSize4ProfUpdating = 0;
+
 //int numberOfInitRelDocs = 5;
 //int numberOfInitNonRelDocs = 15;
 
@@ -186,19 +188,18 @@ void computeRSMethods(Index* ind)
     //return;
 
 
-    string outFilename;
-    if(DATASET == 0)
-        outFilename =outputFileNameHM+"_infile_";
-    else if (DATASET == 1)
-        outFilename =outputFileNameHM+"_ohsu_";
+    string outFilename = outputFileNameHM;
+//    if(DATASET == 0)
+//        outFilename =outputFileNameHM+"_infile_";
+//    else if (DATASET == 1)
+//        outFilename =outputFileNameHM+"_ohsu_";
 
 #define UpProf  1
 #define COMPAVG 1
-    //string methodName ="test_thr_updating_Combsum_khodeLautothr";
-    string methodName = "_QE_LogisticOnRelJudg*EXP(cos)";//RM1(c=n=100)
 
+    string methodName = "_QE_combSumOnRelll_"; //RM1(c=n=100)
     outFilename += methodName;
-    outFilename += "_.3-.05-5-500__lambda[0.05-1(0.1)]__#topPerQuery:{5-50(15)}";//#topPerQueryWord:{(50,100)}//alpha[0.05-1(0.1)]//c(50,100)_//#topPerQuery:{10-30(15)}// #topPosW:30-30(0)
+    outFilename += "_CsT_NsT_lambda[0.05-1(0.2)]_#topPerQuery:{10-25(15)}_#topPerQueryWord:{100}";//alpha[0.05-1(0.1)]_//#topPerQueryWord:{(50,100)}////c(50,100)_//// #topPosW:30-30(0)
 
     ofstream out(outFilename.c_str());
 
@@ -211,36 +212,36 @@ void computeRSMethods(Index* ind)
     double start_thresh =startThresholdHM, end_thresh= endThresholdHM;
 
     for (double thresh = start_thresh ; thresh<=end_thresh ; thresh += intervalThresholdHM)
-        for(double fbCoef = 0.05 ; fbCoef <=1.01 ; fbCoef+=0.1)//lambda //10
+        //for(double fbCoef = 0.05 ; fbCoef <=1.01 ; fbCoef+=0.2)//lambda //10
     {
-        //for(double alpha = 0.05 ; alpha <=1.01 ;alpha +=0.1)//alpha //for RM1 interpolate //4
+        //for(double alpha = 0.05 ; alpha <=1.01 ;alpha +=0.2)//alpha //for RM1 interpolate //4
         {
-            for( double topPos = 5; topPos <= 50 ; topPos += 15 )//3//15 khube //n(50,100) for each query term//c in RM1
+            //for( double topPos = 50; topPos <= 100 ; topPos += 50 )//3//15 khube //n(50,100) for each query term//c in RM1
             {
                 //for(double SelectedWord4Q = 10; SelectedWord4Q <= 25 ; SelectedWord4Q += 15)//3 //v(10,25) for each query(whole)
                 {
 
-                    double SelectedWord4Q = -100;
-                    //double topPos = 100;//n//c in rm1
-                    //double fbCoef = 0.5;//lambda
+                    double SelectedWord4Q = 45;
+                    double topPos = 100;//n//c in rm1
+                    double fbCoef = 0.65;//lambda
                     double alpha = -100;
 
                     //for(double c1 = 0.10 ; c1< 0.36 ;c1+=0.08)//inc//4
-                    double c1 = 0.3;
+                    double c1 = 0.1;
                     {
                         myMethod->setC1(c1);
                         //for(double c2 = 0.01 ; c2 < 0.1 ; c2+=0.03)//dec //3
-                        double c2 = 0.05;
+                        double c2 = 0.04;
                         {
                             //myMethod->setThreshold(init_thr);
                             myMethod->setC2(c2);
 
                             //for(int numOfShownNonRel = 2;numOfShownNonRel< 7;numOfShownNonRel+=3 )//2
-                            int numOfShownNonRel = 5;
+                            int numOfShownNonRel = 2;
                             {
 
                                 //for(int numOfnotShownDoc=100 ;numOfnotShownDoc <= 501 ; numOfnotShownDoc+=100)//5
-                                int numOfnotShownDoc = 500;
+                                int numOfnotShownDoc = 200;
                                 {
                                     myMethod->setThreshold(thresh);
 
@@ -280,6 +281,7 @@ void computeRSMethods(Index* ind)
                                         myMethod->setCoeffParam(fbCoef);
                                         myMethod->alphaCoef = alpha;
 
+                                        lastNewRelSize4ProfUpdating = 0;
                                         //myMethod->setIncThrUpdatingParam(thresh);
 
                                         int numberOfNotShownDocs = 0,numberOfShownNonRelDocs = 0;
@@ -328,19 +330,16 @@ void computeRSMethods(Index* ind)
 
                                             float sim = myMethod->computeProfDocSim(((TextQueryRep *)(qr)) ,docID, relJudgDocs , nonRelJudgDocs , newNonRel,newRel);
 
-
                                             if(sim >=  myMethod->getThreshold() )
                                             {
 
                                                 numberOfNotShownDocs=0;
                                                 bool isRel = false;
 
-
                                                 set<string>::iterator hfit = relDocs.find(ind->document(docID) );
                                                 if( hfit != relDocs.end() )
                                                 {
                                                     relDocs.erase(hfit);
-
 
                                                     relScores.push_back(sim);
 
@@ -373,9 +372,14 @@ void computeRSMethods(Index* ind)
                                                 //#if 0//FBMODE
 #if UpProf
 
-                                                if (results.size() % 15 == 0 /*&& feedbackMode > 0*/)
+                                                if (results.size() % 15 == 0 )
                                                 {
-                                                    myMethod->updateProfile(*((TextQueryRep *)(qr)),relJudgDocs , nonRelJudgDocs );
+                                                    if(lastNewRelSize4ProfUpdating != relJudgDocs.size())//for efficiently purpose
+                                                    {
+                                                        myMethod->updateProfile(*((TextQueryRep *)(qr)),relJudgDocs , nonRelJudgDocs );
+                                                        lastNewRelSize4ProfUpdating = relJudgDocs.size();
+
+                                                    }
 
                                                     //myMethod->updateThreshold(*((TextQueryRep *)(qr)), relJudgDocs, nonRelJudgDocs ,0);
                                                 }
@@ -384,7 +388,7 @@ void computeRSMethods(Index* ind)
                                                     if( numberOfShownNonRelDocs == numOfShownNonRel )
                                                     {
                                                         myMethod->updateThreshold(*((TextQueryRep *)(qr)), relJudgDocs , nonRelJudgDocs ,0);//inc thr
-                                                        numberOfShownNonRelDocs =0;
+                                                        numberOfShownNonRelDocs = 0;
                                                     }
                                             }
                                             else

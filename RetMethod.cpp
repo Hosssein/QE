@@ -444,8 +444,13 @@ void lemur::retrieval::RetMethod::nearestTerm2Vec(vector<double> vec ,vector<int
                                                   vector<pair<int,double> > &nearestTerm)
 {
 
-#if 1 //nearest from relJudgDoc
+#if 1
+    //nearest from relJudgDoc
     lemur::langmod::DocUnigramCounter *dCounter = new lemur::langmod::DocUnigramCounter(relJudDocs, ind);
+
+    //nearest from coll
+    //khob yebar hesab kon!!!!!!
+    //lemur::langmod::DocUnigramCounter *dCounter = new lemur::langmod::DocUnigramCounter(ind);
 
     vector<pair<double,int> >simTermid;
     dCounter->startIteration();
@@ -454,6 +459,9 @@ void lemur::retrieval::RetMethod::nearestTerm2Vec(vector<double> vec ,vector<int
         int id;
         double wd;
         dCounter->nextCount(id, wd);
+
+        //if(ind.termCount() < id)
+        //    cerr<<"***********************"<<id<<endl;
 
         vector<double>dtemp;
         if( wordEmbedding.find(id) != wordEmbedding.end() )
@@ -557,22 +565,18 @@ void lemur::retrieval::RetMethod::computeClipRM1(vector<int> relJudgDoc ,lemur::
 
     vector<pair<double, int> >scIDVec;
     for(int i = 1 ; i <= numTerms ; i++)
-    {
         scIDVec.push_back(make_pair<double,int>(distQuery[i], i ) );
-    }
+
     std::sort(scIDVec.begin() , scIDVec.end() , pairCompare);// can use top n selecting algorithm O(n)
 
     lemur::utility::ArrayCounter<double> rm1LmCounter(numTerms+1);
     double topSum = 0;
     for (int i = 0; i < topsCinRM1; i++)
-    {
-        rm1LmCounter.incCount(scIDVec[i].second , scIDVec[i].first);
         topSum += scIDVec[i].first;
 
-        //cerr << scIDVec[i].first << " ";
-    }
-    //cerr<<endl;
-    //lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
+    for (int i = 0; i < topsCinRM1; i++)
+        rm1LmCounter.incCount(scIDVec[i].second , scIDVec[i].first/topSum);
+
     //delete fblm;
     delete distQuery;
     //END RM1
@@ -592,6 +596,7 @@ void lemur::retrieval::RetMethod::computeClipRM1(vector<int> relJudgDoc ,lemur::
         vector<pair<int ,double> > nearestIdVecs;
         nearestTerm2Vec(qTermVec ,relJudgDoc, nearestIdVecs);//n(50,100) most similar terms
 
+
         double totalSc =0;
         for(int j = 0 ;j < nearestIdVecs.size() ; j++)
         {
@@ -599,10 +604,15 @@ void lemur::retrieval::RetMethod::computeClipRM1(vector<int> relJudgDoc ,lemur::
             totalSc+=sc;
 
             //probWordVec.push_back(make_pair<double, int> (sc, nearestIdVecs[j].first ) );
+
             temp.push_back(make_pair<double, int> (sc, nearestIdVecs[j].first ) );
         }
 
-        for(int j = 0 ; j < tops4EachQueryTerm ; j++)
+        int hmin = temp.size();
+        if(hmin > tops4EachQueryTerm )
+            hmin = tops4EachQueryTerm;
+
+        for(int j = 0 ; j < hmin ; j++)//////
         {
             temp[j].first /= totalSc;
 
@@ -619,15 +629,19 @@ void lemur::retrieval::RetMethod::computeClipRM1(vector<int> relJudgDoc ,lemur::
 
     map<int, double>::iterator mit ;
     for(mit = idScore.begin() ; mit != idScore.end() ;++mit)
-    {
         probWordVec.push_back(make_pair<double,int>(mit->second, mit->first) );
-    }
 
     std::sort(probWordVec.begin() , probWordVec.end() , pairCompare);// can use top n selecting algorithm O(n)
 
     lemur::utility::ArrayCounter<double> sumLmCounter(numTerms+1);
-    for (int i = 0; i < topsCinRM1; i++)//c//v
+
+    double hmin = probWordVec.size() ;
+    if(hmin > topsCinRM1)
+        hmin = topsCinRM1;
+
+    for (int i = 0; i < hmin; i++)//c//v//(50,100)
         sumLmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
+
     //end
 #endif
 
@@ -780,11 +794,11 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
                                                 vector<int> relJudgDoc ,vector<int> nonRelJudgDoc)
 {
     /**mine methods****/
-#define LOGLOGISTIC 1
+#define LOGLOGISTIC 0
 #define COSREL 0
     /**other methods***/
 #define CENTROID 0
-#define COMBSUM 0
+#define COMBSUM 1
 #define COMBMNZ 0
 #define COMBMAX 0
 
@@ -950,6 +964,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
 #if COMBSUM
 
+    //cerr<<relJudgDoc.size()<<endl;
     //cerr<<"injaaaaaaaaaaaaa\n";
     vector<pair<double, int> >probWordVec;
     map<int, double> idScore;
@@ -972,46 +987,51 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
             temp.push_back(make_pair<double, int> (sc, nearestIdVecs[j].first ) );
         }
 
-
         for(int j = 0 ; j < nearestIdVecs.size()/*tops4EachQueryTerm*/ ; j++)
         {
             temp[j].first /= totalSc;
-
 
             double idf1 = log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[i].first ) );
             double idf2= log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[i].first) ) /(log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[i].first) )+1 ) ;
             double dist = weightedQueryTerms[i].second;
             double expdist = exp(dist);
+            double impOfQTerm = 1.0;
 
-
-            idScore[temp[j].second] += temp[j].first  ;
+            idScore[temp[j].second] += temp[j].first *impOfQTerm  ;
         }
-
-
     }
     map<int, double>::iterator mit ;
     for(mit = idScore.begin() ; mit != idScore.end() ;++mit)
-    {
         probWordVec.push_back(make_pair<double,int>(mit->second, mit->first) );
-    }
 
 
     std::sort(probWordVec.begin() , probWordVec.end() , pairCompare);// can use top n selecting algorithm O(n)
-    /*cerr<<" ::: ";
-    for(int i = 0 ; i < probWordVec.size() ;i ++)
-        cerr<< ind.term(probWordVec[i].second)<<" ";
-    cerr << endl;*/
+
 
     COUNT_T numTerms = ind.termCountUnique();
     lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
 
+
+    cerr<<":::::\n";
+    for(int i = 0 ;i < queryTermsIdVec.size();i++)
+    {
+        cerr<<ind.term(queryTermsIdVec[i].first)<<" ";
+    }
+    cerr<<"\n";
     for (int i = 0; i < tops4EachQuery; i++)//v
+    {
         lmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
+        cerr<<ind.term(probWordVec[i].second)<<" "<<probWordVec[i].first<<", ";
+    }
+    cerr<<endl<<endl;
+
 
 
     QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
     lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
     qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
+
+
 
     delete fblm;
 #endif
