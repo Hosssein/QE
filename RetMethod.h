@@ -729,6 +729,16 @@ public:
     {
         lastPosThr = sc;
     }
+    virtual void setDefualtThrParam()
+    {
+
+        relMu = 0.0, nonRelMu = 0.0, relX2 = 0.0, nonRelX2 = 0.0;//for thrUpdating
+        avgPosThr = 0, avgNegThr = 0,lastPosThr = 0;
+
+
+
+    }
+
 
 
     double fangScore( DocIDSet &fbDocs, int docID, bool newNonRel)
@@ -899,6 +909,33 @@ public:
         newNonRelRecievedCnt = 0;
         newRelRecievedCnt =0;
     }
+    void setRelX2(double sc)
+    {
+        this->relX2 += sc*sc;
+    }
+    void setRelMu(double mu)
+    {
+        this->relMu = mu;
+        //cerr<<"relmu"<<mu<<endl;
+    }
+    void setNonRelX2(double sc)
+    {
+        this->nonRelX2 += sc*sc;
+    }
+    void setNonRelMu(double mu)
+    {
+        this->nonRelMu = mu;
+        //cerr<<"nonrelmu"<<mu<<endl;
+    }
+    void clearThrUpdatingParam()
+    {
+        relMu = 0;
+        relX2 = 0;
+        nonRelMu = 0;
+        nonRelX2 = 0;
+        numOfNegFB = 0;
+        numOfPosFB = 0;
+    }
 
 
 protected:
@@ -918,7 +955,11 @@ protected:
 
     double avgPosThr, avgNegThr,lastPosThr;
 
+
+
 public:
+    double relMu, nonRelMu, relX2, nonRelX2;//for thrUpdating
+
     double numOfPosFB,numOfNegFB;
 protected:
     //double *prev_distQuery;

@@ -42,6 +42,7 @@ extern int RSMethodHM; // 0--> LM , 1--> RecSys
 extern int negGenModeHM;//0 --> coll , 1--> nonRel
 extern int feedbackMode;
 extern int updatingThresholdMode; // 0 ->no updating ,1->linear
+extern int lastThrUpdatingMode;
 
 extern map<int,vector<double> >wordEmbedding;
 extern map<int,vector<double> >docIdKeyWords;
@@ -251,64 +252,16 @@ lemur::retrieval::RetMethod::RetMethod(const Index &dbIndex,
     newRelRecieved = false;
     newNonRelRecievedCnt = 0,newRelRecievedCnt =0;
 
-    //int W2VecSize =100;
-    /*coefMatrix = new double*[W2VecSize];
-    for(int i = 0 ; i< W2VecSize ; i++)
-        coefMatrix[i] = new double[W2VecSize];
-    for(int i = 0 ; i< W2VecSize ; i++)
-        for(int j = 0 ; j < W2VecSize ; j++)
-            coefMatrix[i][j]=((rand()%2000)-1000)/1000.0f;
-    */
+
+    relMu = 0 ;
+    nonRelMu = 0;
+    relX2 = 0;
+    nonRelX2 = 0 ;
+
+
     W2VecDimSize = 100;
-    //coefMatrix.resize(W2VecDimSize);
-    //for(int i = 0 ;i < W2VecDimSize ; i++)
-    //    coefMatrix[i].resize(W2VecDimSize);
-
-    //for(int i = 0 ;i < W2VecDimSize ; i++)
-    //    for(int j = 0 ; j < W2VecDimSize ; j++)
-    //    {
-    //        coefMatrix[i][j] = ((rand()%2000)-1000)/1000.0f;
-    //cerr<<coefMatrix[i][j]<<" ";
-    //    }
-    /*alphaCoef = 0.8;
-    lambdaCoef = 0.05;
-    betaCoef = 0.01;
-    etaCoef = 0.0000001;*/
-
-    //alphaCoef = 0.8;
-    //lambdaCoef = 0.05;
-    //betaCoef = 0.01;
-    //etaCoef =0.000001;
-    //queryAvgVec.assign(W2VecDimSize , -10.0);
     Vq.assign(W2VecDimSize , 0.0);
-    //Vbwn.assign(W2VecDimSize , 0.0);
-    //Vwn.assign(W2VecDimSize , 0.0);
 
-    //numberOfPositiveSelectedTopWord = 20.0;
-    //numberOfNegativeSelectedTopWord = 20.0;
-
-
-    /*
-    switch (RSMethodHM)
-    {
-    case 0://lm
-        // setThreshold(-4.3);
-        setThreshold(-6.3);
-
-        break;
-    case 1://negGen
-    {
-        if(negGenModeHM==0)//col//mu=2500
-            // setThreshold(2.1);
-            setThreshold(1.5);
-        else if(negGenModeHM == 1)
-            // setThreshold(2.4);
-            setThreshold(1.6);
-        break;
-    }
-    }
-*/
-    //prev_distQuery = new double[ind.termCountUnique()+1];
     scFunc = new ScoreFunc();
     scFunc->setScoreMethod(qryParam.adjScoreMethod);
 }
@@ -794,21 +747,21 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
                                                 vector<int> relJudgDoc ,vector<int> nonRelJudgDoc)
 {
     /**mine methods****/
-#define LOGLOGISTIC 0
+#define LOGLOGISTIC 1
 #define COSREL 0
     /**other methods***/
 #define CENTROID 0
-#define COMBSUM 1
+#define COMBSUM 0
 #define COMBMNZ 0
 #define COMBMAX 0
 
 #define RMONE 0
 
-    if(relJudgDoc.size()== 0 )//if we use relJudDoc for nearest term selection!!!!!
+    /*if(relJudgDoc.size()== 0 )//if we use relJudDoc for nearest term selection!!!!!
     {
         cerr<<"RELJUDGGGGGGGGG!\n";
         return;
-    }
+    }*/
 
 
 
@@ -1012,18 +965,18 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
 
 
-    cerr<<":::::\n";
-    for(int i = 0 ;i < queryTermsIdVec.size();i++)
-    {
-        cerr<<ind.term(queryTermsIdVec[i].first)<<" ";
-    }
-    cerr<<"\n";
-    for (int i = 0; i < tops4EachQuery; i++)//v
-    {
-        lmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
-        cerr<<ind.term(probWordVec[i].second)<<" "<<probWordVec[i].first<<", ";
-    }
-    cerr<<endl<<endl;
+    //    cerr<<":::::\n";
+    //    for(int i = 0 ;i < queryTermsIdVec.size();i++)
+    //    {
+    //        cerr<<ind.term(queryTermsIdVec[i].first)<<" ";
+    //    }
+    //    cerr<<"\n";
+    //    for (int i = 0; i < tops4EachQuery; i++)//v
+    //    {
+    //        lmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
+    //        cerr<<ind.term(probWordVec[i].second)<<" "<<probWordVec[i].first<<", ";
+    //    }
+    //    cerr<<endl<<endl;
 
 
 
@@ -1829,18 +1782,64 @@ void lemur::retrieval::RetMethod::computeNearestTerm2Vec(vector<double> vec )
 
 
 void lemur::retrieval::RetMethod::updateThreshold(lemur::api::TextQueryRep &origRep,
-                                                  vector<int> relJudgDoc ,vector<int> nonReljudgDoc , int mode)
+                                                  vector<int> relJudgDoc ,vector<int> nonRelJudgDoc , int mode)
 {
-//    cerr<<" "<<numOfPosFB<<" "<<avgPosThr<<" "<<lastPosThr<<endl;
+    //    cerr<<" "<<numOfPosFB<<" "<<avgPosThr<<" "<<lastPosThr<<endl;
+    if(mode == 0)//pos recieved
+    {
+        lastThrUpdatingMode = 0;
+        double varPos = (relX2 / (double)relJudgDoc.size()) - (relMu * relMu) ;
+        numOfPosFB = relJudgDoc.size();
+        //double thr = ((numOfPosFB-1)/numOfPosFB)*(relMu -  2*varPos) +((1/numOfPosFB)*lastPosThr);
+        double thr = ((numOfPosFB-1)/numOfPosFB)*(relMu -  4*varPos) +((1/numOfPosFB)*( getThreshold()));
+        setThreshold(thr);
+        //avgPosThr = (numOfPosFB*avgPosThr+lastPosThr)/(numOfPosFB+1);
 
-//    double thr = ((numOfPosFB-1)/numOfPosFB)*avgPosThr +((1/numOfPosFB)*lastPosThr);
-//    setThreshold(thr);
-//    cerr<<"thr:"<<thr<<" \n";
+        //cerr<<" mode1Pos: "<<thr<<" varpos: "<<varPos<<" ";
+        //cerr<<" X2: "<< relX2 <<" #pos: "<<numOfPosFB<<" MU: "<<relMu<<endl;
 
-//    avgPosThr = (numOfPosFB*avgPosThr+lastPosThr)/(numOfPosFB+1);
-//    numOfPosFB++;
+    }else if(mode == 1)//neg recieved
+    {
+        lastThrUpdatingMode = 1;
+        //        double thr = getThreshold() + 0.01;
+        //        setThreshold(thr);
+        //        cerr<<"mode1: "<<thr<<endl;
+
+        double varNeg = (nonRelX2 / (double)nonRelJudgDoc.size()) - (nonRelMu * nonRelMu) ;
+        double thr = getThreshold() + varNeg;
+        setThreshold(thr);
+        //cerr<<"modeNeg: "<<thr<<" varneg: "<<varNeg<<" ";
+        //cerr<<" X2: "<<nonRelX2<<" #neg: "<<nonRelJudgDoc.size()<<" MU: "<<nonRelMu<<" \n";
+    }
+    else //or not passed for a while
+    {
+        lastThrUpdatingMode = 2;
+        if(nonRelJudgDoc.size()!= 0)
+        {
+            double varNeg = (nonRelX2 / (double)nonRelJudgDoc.size()) - (nonRelMu * nonRelMu) ;
+            double thr = getThreshold() - 2*varNeg;
+            setThreshold(thr);
+            //cerr<<"mode3Not: "<<thr<<" varneg: "<<varNeg<<" ";
+            //cerr<<" X2: "<<nonRelX2<<" #neg: "<<nonRelJudgDoc.size()<<" MU: "<<nonRelMu<<" \n";
+        }
+        else
+        {
+
+            double thr = getThreshold() - 0.1;
+            setThreshold(thr);
+
+            //cerr<<"mode3NNN: "<<thr<<" ";
+            //cerr<<" X2: "<<" #neg: "<<nonRelJudgDoc.size()<<" MU: "<<nonRelMu<<" \n";
+
+        }
 
 
+    }
+
+
+
+
+    /*
 //    thresholdUpdatingMethod = updatingThresholdMode;
 //    //double alpha = 0.3,beta = 0.9;
 //       if(thresholdUpdatingMethod == 0)//no updating
@@ -1859,7 +1858,7 @@ void lemur::retrieval::RetMethod::updateThreshold(lemur::api::TextQueryRep &orig
             //cout<<"mode 1 "<<getThreshold()<<endl;
         }
     }
-
+*/
 }
 
 void lemur::retrieval::RetMethod::computeMixtureFBModel(QueryModel &origRep,
