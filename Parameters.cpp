@@ -89,7 +89,7 @@ void readParams(string paramFileName)
         resultFileNameHM += "res/Fang_";
 
     }
-    if(feedbackMode == 0)//no fb
+    /*if(feedbackMode == 0)//no fb
     {
         outputFileNameHM+="Nofb_";
         resultFileNameHM += "Nofb_";
@@ -111,24 +111,24 @@ void readParams(string paramFileName)
     {
         outputFileNameHM+="NegMixtureFB_";
         resultFileNameHM += "NegMixtureFB_";
-    }
+    }*/
 
     if(updatingThresholdMode == 0)//no updating
     {
-        outputFileNameHM +="NoUpdatingThr_";
-        resultFileNameHM += "NoUpdatingThr_";
+        outputFileNameHM +="NoThrUpd_";
+        resultFileNameHM += "NoThrUpd_";
 
     }else if(updatingThresholdMode == 1)//linear
     {
-        outputFileNameHM+="LinearUpdatingThr_";
-        resultFileNameHM += "LinearUpdatingThr_";
+        outputFileNameHM+="LAUTO_";
+        resultFileNameHM += "LAUTO_";
     }else if(updatingThresholdMode == 2)
     {
         outputFileNameHM+="DiffAlphaUpdatingThr_";
         resultFileNameHM += "DiffAlphaUpdatingThr_";
     }
 
-    outputFileNameHM += "profDocThr:_"+numToStrHM(startThresholdHM)+":"+numToStrHM(endThresholdHM)+"("+numToStrHM(intervalThresholdHM)+")";
+    outputFileNameHM += "Thr:_"+numToStrHM(startThresholdHM)+":"+numToStrHM(endThresholdHM)+"("+numToStrHM(intervalThresholdHM)+")";
     //outputFileNameHM += "NegMu:_"+numToStrHM(startNegMu)+":"+numToStrHM(endNegMu)+"("+numToStrHM(NegMuInterval)+")";
     //outputFileNameHM += "Delta:_"+numToStrHM(startDelta)+":"+numToStrHM(endDelta)+"("+numToStrHM(deltaInterval)+")";
     //outputFileNameHM += "Lambda1:_"+numToStrHM(smoothJMInterval1);

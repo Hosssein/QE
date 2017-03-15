@@ -42,7 +42,6 @@ extern int RSMethodHM; // 0--> LM , 1--> RecSys
 extern int negGenModeHM;//0 --> coll , 1--> nonRel
 extern int feedbackMode;
 extern int updatingThresholdMode; // 0 ->no updating ,1->linear
-extern int lastThrUpdatingMode;
 
 extern map<int,vector<double> >wordEmbedding;
 extern map<int,vector<double> >docIdKeyWords;
@@ -746,6 +745,7 @@ void lemur::retrieval::RetMethod::computeClipRM1(vector<int> relJudgDoc ,lemur::
 void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRep,
                                                 vector<int> relJudgDoc ,vector<int> nonRelJudgDoc)
 {
+#define BL 0
     /**mine methods****/
 #define LOGLOGISTIC 1
 #define COSREL 0
@@ -763,21 +763,22 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
         return;
     }*/
 
+#if BL
+    IndexedRealVector rel;
+    for (int i =0 ; i<relJudgDoc.size() ; i++)
+    {
+        rel.PushValue(relJudgDoc[i],0);
+    }
+    PseudoFBDocs  *relDocs;
+    relDocs= new PseudoFBDocs(rel,relJudgDoc.size(),true);
 
+    updateTextQuery(origRep, *relDocs ,*relDocs);
+#endif
 
 #if RMONE
 
     computeClipRM1(relJudgDoc ,origRep);
 
-    //    IndexedRealVector rel;
-    //    for (int i =0 ; i<relJudgDoc.size() ; i++)
-    //    {
-    //        rel.PushValue(relJudgDoc[i],0);
-    //    }
-    //    PseudoFBDocs  *relDocs;
-    //    relDocs= new PseudoFBDocs(rel,relJudgDoc.size(),true);
-
-    //    updateTextQuery(origRep, *relDocs ,*relDocs);
 
 #endif
 
@@ -1132,23 +1133,17 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
             delete myDocCounter;
         }//end-for-reljudg
 
-        //double summ=0;
-
-        //cerr<<queryTermsIdVec.size()<<" "<<weightedQueryTerms.size()<<"\n";
-
-        double idf1 = log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first ) );
-        double idf2= log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) ) /(log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) )+1 ) ;
-        double dist = weightedQueryTerms[ii].second;
-        double expdist = exp(dist);
+        //double idf1 = log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first ) );
+        //double idf2= log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) ) /(log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) )+1 ) ;
+        //double dist = weightedQueryTerms[ii].second;
+        //double expdist = exp(dist);
         double impOfQTerm = 1.0;
 
         for(map<int , double>::iterator it = idProbMap.begin() ; it != idProbMap.end() ; ++it )
         {
             finalScoreIdVec.push_back( make_pair<double,int>( (it->second * impOfQTerm )/totalScore , it->first) );
-            //cerr<<it->second<<" "<<weightedQueryTerms[ii].second<<" "<<totalScore<<endl;
-            //summ +=it->second;;
         }
-        //cerr<<summ<<endl<<endl;
+
         std::sort(finalScoreIdVec.begin() , finalScoreIdVec.end() , pairCompare);// can use top n selecting algorithm O(n)
 
 
@@ -1784,81 +1779,16 @@ void lemur::retrieval::RetMethod::computeNearestTerm2Vec(vector<double> vec )
 void lemur::retrieval::RetMethod::updateThreshold(lemur::api::TextQueryRep &origRep,
                                                   vector<int> relJudgDoc ,vector<int> nonRelJudgDoc , int mode)
 {
-    //    cerr<<" "<<numOfPosFB<<" "<<avgPosThr<<" "<<lastPosThr<<endl;
-    if(mode == 0)//pos recieved
+
+    if(mode == 0)//non rel passed
     {
-        lastThrUpdatingMode = 0;
-        double varPos = (relX2 / (double)relJudgDoc.size()) - (relMu * relMu) ;
-        numOfPosFB = relJudgDoc.size();
-        //double thr = ((numOfPosFB-1)/numOfPosFB)*(relMu -  2*varPos) +((1/numOfPosFB)*lastPosThr);
-        double thr = ((numOfPosFB-1)/numOfPosFB)*(relMu -  4*varPos) +((1/numOfPosFB)*( getThreshold()));
-        setThreshold(thr);
-        //avgPosThr = (numOfPosFB*avgPosThr+lastPosThr)/(numOfPosFB+1);
-
-        //cerr<<" mode1Pos: "<<thr<<" varpos: "<<varPos<<" ";
-        //cerr<<" X2: "<< relX2 <<" #pos: "<<numOfPosFB<<" MU: "<<relMu<<endl;
-
-    }else if(mode == 1)//neg recieved
-    {
-        lastThrUpdatingMode = 1;
-        //        double thr = getThreshold() + 0.01;
-        //        setThreshold(thr);
-        //        cerr<<"mode1: "<<thr<<endl;
-
-        double varNeg = (nonRelX2 / (double)nonRelJudgDoc.size()) - (nonRelMu * nonRelMu) ;
-        double thr = getThreshold() + varNeg;
-        setThreshold(thr);
-        //cerr<<"modeNeg: "<<thr<<" varneg: "<<varNeg<<" ";
-        //cerr<<" X2: "<<nonRelX2<<" #neg: "<<nonRelJudgDoc.size()<<" MU: "<<nonRelMu<<" \n";
+        setThreshold(getThreshold()+getC1());
     }
-    else //or not passed for a while
+    else //if(mode == 1)//not showed anything
     {
-        lastThrUpdatingMode = 2;
-        if(nonRelJudgDoc.size()!= 0)
-        {
-            double varNeg = (nonRelX2 / (double)nonRelJudgDoc.size()) - (nonRelMu * nonRelMu) ;
-            double thr = getThreshold() - 2*varNeg;
-            setThreshold(thr);
-            //cerr<<"mode3Not: "<<thr<<" varneg: "<<varNeg<<" ";
-            //cerr<<" X2: "<<nonRelX2<<" #neg: "<<nonRelJudgDoc.size()<<" MU: "<<nonRelMu<<" \n";
-        }
-        else
-        {
-
-            double thr = getThreshold() - 0.1;
-            setThreshold(thr);
-
-            //cerr<<"mode3NNN: "<<thr<<" ";
-            //cerr<<" X2: "<<" #neg: "<<nonRelJudgDoc.size()<<" MU: "<<nonRelMu<<" \n";
-
-        }
-
-
+        setThreshold( getThreshold()- getC2() );
     }
 
-
-
-
-    /*
-//    thresholdUpdatingMethod = updatingThresholdMode;
-//    //double alpha = 0.3,beta = 0.9;
-//       if(thresholdUpdatingMethod == 0)//no updating
-//        return;
-//    else if(thresholdUpdatingMethod == 1)//linear
-    {
-        if(mode == 0)//non rel passed
-        {
-            //cerr<<"mode 0 ";
-            setThreshold(getThreshold()+getC1());
-            //cout<<"mode 0 "<<getThreshold()<<endl;
-        }
-        else //if(mode == 1)//not showed anything
-        {
-            setThreshold( getThreshold()- getC2() );
-            //cout<<"mode 1 "<<getThreshold()<<endl;
-        }
-    }
-*/
 }
 
 void lemur::retrieval::RetMethod::computeMixtureFBModel(QueryModel &origRep,
