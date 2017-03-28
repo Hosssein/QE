@@ -29,7 +29,7 @@ using namespace lemur::parse;
 using namespace lemur::retrieval;
 using namespace std;
 
-#define DATASET 0 //0-->infile, 1-->ohsu
+
 #define RETMODE RSMethodHM//LM(0) ,RS(1), NegKLQTE(2),NegKL(3)
 #define NEGMODE negGenModeHM//coll(0) ,NonRel(1)
 #define FBMODE feedbackMode//NoFB(0),NonRel(1),Normal(2),Mixture(3)
@@ -94,6 +94,9 @@ vector<pair<int ,vector<double> > > queryTermsIdVec;
 //int numberOfInitRelDocs = 5;
 //int numberOfInitNonRelDocs = 15;
 
+#define DATASET 1 //0-->infile, 1-->ohsu
+
+
 int main(int argc, char * argv[])
 {
 
@@ -149,9 +152,10 @@ int main(int argc, char * argv[])
 
         }else if(DATASET == 1)//ohsu
         {
-            judgmentPath = "/home/hossein/Desktop/IIS/lemur/DataSets/Ohsumed/Data/trec9-train/qrels.ohsu.adapt.87";
-            indexPath = "/home/hossein/Desktop/IIS/lemur/DataSets/Ohsumed/Index/trec9-train/index.key";
-            queryPath = "/home/hossein/Desktop/IIS/lemur/DataSets/Ohsumed/Data/trec9-train/stemmed_ohsu_query.txt";
+            judgmentPath = "/home/hossein/Desktop/IIS/Lemur/DataSets/oushumed/Data/ohsumed/trec9-test/qrels.ohsu.88-91";
+            indexPath = "/home/hossein/Desktop/IIS/Lemur/DataSets/oushumed/Index/index.key";
+            queryPath = "/home/hossein/Desktop/IIS/Lemur/DataSets/oushumed/Data/ohsumed/trec9-train/trec9-train_output/stemmed_ohsu_query.txt";
+
 
         }
 
@@ -159,9 +163,11 @@ int main(int argc, char * argv[])
     }
 
 
+
     Index *ind = IndexManager::openIndex(indexPath);// with StopWord && stemmed
 
-    //writeDocs2File(ind);
+    //writeDocs2File(ind);//from index
+
 
 #if 1
     //readStopWord(ind);
@@ -192,17 +198,17 @@ void computeRSMethods(Index* ind)
 
 
     string outFilename = outputFileNameHM;
-    //    if(DATASET == 0)
-    //        outFilename =outputFileNameHM+"_infile_";
-    //    else if (DATASET == 1)
-    //        outFilename =outputFileNameHM+"_ohsu_";
+        if(DATASET == 0)
+            outFilename =outputFileNameHM+"_infile_";
+        else if (DATASET == 1)
+            outFilename =outputFileNameHM+"_ohsu_";
 
-#define UpProf  1
+
 #define COMPAVG 1
 
-    string methodName = "_QE_LogisticOnRelll_"; //RM1(c=n=100)
+    string methodName = "_weightedQ_pupd5_combmnz"; //RM1(c=n=100)
     outFilename += methodName;
-    outFilename += "_lambda[0.05-1(0.2)]_#topPerQueryWord:{5-20(5)}_";//alpha[0.05-1(0.1)]//#topPerQuery:{10-25(15)}_//#topPerQueryWord:{(50,100)}////c(50,100)_//// #topPosW:30-30(0)
+    outFilename += "_lambda{fard}_#top:{50}_#perQuery:{10-25(15)}";//#perQuery:{10-25(15)}//_alpha[0.1-1(0.4)]//#fb{50}_//#perQuery:{10-25(15)}////_//#topPerQueryWord:{(50,100)}////c(50,100)_//// #topPosW:30-30(0)
 
     ofstream out(outFilename.c_str());
 
@@ -211,42 +217,42 @@ void computeRSMethods(Index* ind)
     cout<< "RSMethod: "<<RETMODE<<" NegGenMode: "<<NEGMODE<<" feedbackMode: "<<FBMODE<<" updatingThrMode: "<<UPDTHRMODE<<"\n";
     cout<<"outfile: "<<outFilename<<endl;
 
-    double oldFmeasure = 0.0 , newFmeasure = 0.0;
+    //double oldFmeasure = 0.0 , newFmeasure = 0.0;
     double start_thresh =startThresholdHM, end_thresh= endThresholdHM;
 
     for (double thresh = start_thresh ; thresh<=end_thresh ; thresh += intervalThresholdHM)
-        for(double fbCoef = 0.05 ; fbCoef <=1.01 ; fbCoef+=0.2)//lambda //5
+        for(double fbCoef = 0.1; fbCoef <=0.91 ; fbCoef+=0.2)//lambda //4
         {
-            //for(double alpha = 0.05 ; alpha <=1.01 ;alpha +=0.1)//alpha //for RM1 interpolate //4
+            //for(double alpha = 0.1 ; alpha <=1.01 ;alpha +=0.4)//alpha //for RM1 interpolate //4
             {
-                for( double topPos = 5; topPos <= 20 ; topPos += 5 )//3//15 khube //n(50,100) for each query term//c in RM1
+                //for( double topPos = 10; topPos <= 50 ; topPos += 20 )//3//15 khube //n(50,100) for each query term//c in RM1
                 {
-                    //for(double SelectedWord4Q = 10; SelectedWord4Q <= 25 ; SelectedWord4Q += 15)//3 //v(10,25) for each query(whole)
+                    for(double SelectedWord4Q = 10; SelectedWord4Q <= 25 ; SelectedWord4Q += 15)//3 //v(10,25) for each query(whole)
                     {
 
-                        double SelectedWord4Q = -1;
-                        //double topPos = 100;//n//c in rm1
-                        //double fbCoef = 0.65;//lambda
+                        //double SelectedWord4Q = -1;
+                        double topPos = 50;//n//c in rm1
+                        //double fbCoef = 0.5;//lambda
                         double alpha = -1;
 
-                        for(double c1 = 0.10 ; c1< 0.36 ;c1+=0.08)//inc//4
-                            //double c1 = -1;
+                        for(double c1 = 0.2 ; c1< 0.36 ;c1+=0.08)//inc//3
+                            //double c1 = 0.26;
                         {
                             myMethod->setC1(c1);
                             for(double c2 = 0.01 ; c2 < 0.1 ; c2+=0.03)//dec //3
-                                //double c2 = -1;
+                                //double c2 = 0.01;
                             {
                                 //myMethod->setThreshold(init_thr);
                                 myMethod->setC2(c2);
-                                for(int numOfShownNonRel = 2; numOfShownNonRel< 7; numOfShownNonRel+=3 )//2
-                                    //int numOfShownNonRel = -1;
+                                //for(int numOfShownNonRel = 2; numOfShownNonRel< 7; numOfShownNonRel+=3 )//2
+                                    int numOfShownNonRel = 1;
                                 {
-                                    for(int numOfnotShownDoc = 50 ;numOfnotShownDoc <= 401 ; numOfnotShownDoc+= 100)//5
-                                        //int numOfnotShownDoc = 200;
+                                    for(int numOfnotShownDoc = 250 ;numOfnotShownDoc <= 401 ; numOfnotShownDoc+= 150)//5
+                                        //int numOfnotShownDoc = 150;
                                     {
                                         myMethod->setThreshold(thresh);
                                         myMethod->setTop4EachQuery(SelectedWord4Q);//v
-                                        myMethod->setTopWords4EachQueryTerm(topPos);//n
+                                        myMethod->setTopWords4EachQueryTerm(topPos);//n//feedbackTermCount sets
                                         myMethod->topsCinRM1 = topPos;//c
 
                                         //myMethod->setNumberOfPositiveSelectedTopWordAndFBcount(topPos);//n
@@ -353,7 +359,13 @@ void computeRSMethods(Index* ind)
                                                         nonRelJudgDocs.push_back(docID);
                                                         newNonRel = true;
                                                         newRel = false;
-                                                        numberOfShownNonRelDocs++;
+                                                        //numberOfShownNonRelDocs++;
+                                                        //if(!isRel)
+                                                            //if( numberOfShownNonRelDocs == numOfShownNonRel )
+                                                            {
+                                                                myMethod->updateThreshold(*((TextQueryRep *)(qr)), relJudgDocs , nonRelJudgDocs ,0);//inc thr
+                                                                //numberOfShownNonRelDocs = 0;
+                                                            }
 
                                                     }
                                                     results.PushValue(docID , sim);
@@ -364,10 +376,11 @@ void computeRSMethods(Index* ind)
                                                         break;
                                                     }
 
-                                                    if (results.size() % 15 == 0 )
+                                                    if (results.size() % 5 == 0 )
                                                     {
                                                         if(lastNewRelSize4ProfUpdating != relJudgDocs.size())//for efficiently purpose
                                                         {
+                                                            //cerr<<"profUpd\n";
                                                             myMethod->updateProfile(*((TextQueryRep *)(qr)),relJudgDocs , nonRelJudgDocs );
                                                             lastNewRelSize4ProfUpdating = relJudgDocs.size();
 
@@ -375,12 +388,7 @@ void computeRSMethods(Index* ind)
 
                                                     }
 
-                                                    if(!isRel)
-                                                        if( numberOfShownNonRelDocs == numOfShownNonRel )
-                                                        {
-                                                            myMethod->updateThreshold(*((TextQueryRep *)(qr)), relJudgDocs , nonRelJudgDocs ,0);//inc thr
-                                                            numberOfShownNonRelDocs = 0;
-                                                        }
+
                                                 }
                                                 else
                                                 {
@@ -400,8 +408,8 @@ void computeRSMethods(Index* ind)
 
 
 
-                                            results.Sort();
-                                            resultFile.writeResults(q->id() ,&results,results.size());
+                                            //results.Sort();
+                                            //resultFile.writeResults(q->id() ,&results,results.size());
                                             relRetCounter += relJudgDocs.size();
                                             retCounter += results.size();
                                             relCounter += relDocsSize;
@@ -452,13 +460,13 @@ void computeRSMethods(Index* ind)
                                         out<<"old_F-measure: "<<(2*pp*dd)/(pp+dd)<<endl<<endl;
 
 
-                                        newFmeasure = (2*avgPrec*avgRecall)/(avgPrec+avgRecall) ;
-                                        if( oldFmeasure > newFmeasure )
-                                        {
-                                            oldFmeasure = 0.0;
-                                            break;
-                                        }
-                                        oldFmeasure = newFmeasure;
+//                                        newFmeasure = (2*avgPrec*avgRecall)/(avgPrec+avgRecall) ;
+//                                        if( oldFmeasure > newFmeasure )
+//                                        {
+//                                            oldFmeasure = 0.0;
+//                                            break;
+//                                        }
+//                                        oldFmeasure = newFmeasure;
 
 
 
@@ -690,9 +698,9 @@ void MonoKLModel(Index* ind){
 void writeDocs2File(Index *ind)
 {
     ofstream outfile;
-    outfile.open("infile_docs_Stemmed_withoutSW.txt");
+    outfile.open("ohsu_docs_Stemmed_withoutSW.txt");
     {
-        for(int docID = 1 ; docID < ind->docCount(); docID++)
+        for(int docID = 1 ; docID <= ind->docCount(); docID++)
         {
             TermInfoList *docTermInfoList =  ind->termInfoList(docID);
             docTermInfoList->startIteration();
@@ -734,14 +742,21 @@ void readWordEmbeddingFile(Index *ind)
 #if 1
     if(WHO == 0)
     {
-        in.open("/home/iis/Desktop/Edu/thesis/wordEmbeddingVector/infile_docs_Stemmed_withoutSW_W2V.vectors");
+        if(DATASET == 0)
+        {
+            in.open("/home/iis/Desktop/Edu/thesis/wordEmbeddingVector/infile_docs_Stemmed_withoutSW_W2V.vectors");
         //in.open("/home/iis/Desktop/RS-Framework/QE/QE/infile_docs_Stemmed_withoutSW_W2V.vectors");//server 69
-        //ifstream in("/home/hossein/Desktop/IIS/Lemur/DataSets/wordEmbeddingVector/infile_vectors_100D_W2V.txt");
+        }else if(DATASET == 1)
+        {
+            in.open("/home/iis/Desktop/Edu/thesis/wordEmbeddingVector/ohsu_stemmed_withoutSW_vectors100.txt");
+        }
 
     }else
     {
-        in.open("/home/hossein/Desktop/IIS/Lemur/DataSets/wordEmbeddingVector/infile_docs_Stemmed_withoutSW_W2V.vectors");
-
+        if(DATASET == 0)//infile
+            in.open("/home/hossein/Desktop/IIS/Lemur/DataSets/wordEmbeddingVector/infile_docs_Stemmed_withoutSW_W2V.vectors");
+        else if(DATASET == 1)//ohsu
+            in.open("/home/hossein/Desktop/IIS/Lemur/DataSets/wordEmbeddingVector/ohsu_stemmed_withoutSW_vectors100.txt");
     }
     getline(in,line);//first line is statistical in W2V
 #endif
@@ -894,8 +909,8 @@ void computeQueryAvgVec(Document *d,RetMethod *myMethod )
 
         if(it != endIt)//found
         {
-            //for(int i=0; i < qt->weight() ; i++)   //(<queryW1,<1,2,4>)(queryW1,<1,2,3>)
-            queryTermsIdVec.push_back(make_pair<int , vector<double> > (qt->id() ,it->second ) );
+            for(int i=0; i < qt->weight() ; i++)   //(<queryW1,<1,2,4>)(queryW1,<1,2,3>)
+                queryTermsIdVec.push_back(make_pair<int , vector<double> > (qt->id() ,it->second ) );
         }
         else
         {
@@ -945,8 +960,6 @@ void computeQueryAvgVec(Document *d,RetMethod *myMethod )
     for(int i = 0 ;i< weightedQueryTerms.size() ;i++)
         weightedQueryTerms[i].second /= totalSc;
 
-
-    return;
 
 }
 

@@ -1009,6 +1009,7 @@ public:
     void setTopWords4EachQueryTerm(double n)
     {
         tops4EachQueryTerm = n;
+        this->qryParam.fbTermCount = n;
     }
 
     //bool *relComputed;
