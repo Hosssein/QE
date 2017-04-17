@@ -50,6 +50,7 @@ extern set<int> stopWords;
 extern vector<pair<int ,vector<double> > > queryTermsIdVec;
 extern vector<pair<int, double> >weightedQueryTerms;
 
+extern bool isRellNearest;
 
 static int qid=1;
 static string RM;
@@ -217,7 +218,7 @@ lemur::retrieval::RetMethod::RetMethod(const Index &dbIndex,
     //docParam.ADDelta = RetParameter::defaultADDelta;
     docParam.JMLambda = RetParameter::defaultJMLambda;
     //docParam.JMLambda = 0.9;
-    docParam.DirPrior = dbIndex.docLengthAvg();//1000//50;//RetParameter::defaultDirPrior;
+    docParam.DirPrior = RetParameter::defaultDirPrior;//dbIndex.docLengthAvg();//1000//50;//
 
     qryParam.adjScoreMethod = RetParameter::NEGATIVEKLD;
     //qryParam.adjScoreMethod = RetParameter::QUERYLIKELIHOOD;
@@ -228,7 +229,7 @@ lemur::retrieval::RetMethod::RetMethod(const Index &dbIndex,
 
 
     qryParam.fbMethod = RetParameter::MIXTURE;
-    RM="MIX";// *** Query Likelihood adjusted score method *** //
+    RM="RM3";// *** Query Likelihood adjusted score method *** //
     qryParam.fbCoeff = RetParameter::defaultFBCoeff;//default = 0.5
     //qryParam.fbCoeff =0.1;
     qryParam.fbPrTh = RetParameter::defaultFBPrTh;
@@ -396,13 +397,18 @@ void lemur::retrieval::RetMethod::nearestTerm2Vec(vector<double> vec ,vector<int
                                                   vector<pair<int,double> > &nearestTerm)
 {
 
-#if 1
-    //nearest from relJudgDoc
-    lemur::langmod::DocUnigramCounter *dCounter = new lemur::langmod::DocUnigramCounter(relJudDocs, ind);
-
-    //nearest from coll
-    //khob yebar hesab kon!!!!!!
-    //lemur::langmod::DocUnigramCounter *dCounter = new lemur::langmod::DocUnigramCounter(ind);
+    lemur::langmod::DocUnigramCounter *dCounter;
+    if(isRellNearest)
+    {
+        dCounter = new lemur::langmod::DocUnigramCounter(relJudDocs, ind);//nearest from relJudgDoc
+    }else if(collNearestTerm.size() == 0)//not calculated before
+    {
+        dCounter = new lemur::langmod::DocUnigramCounter(ind);//nearest from coll
+    }else
+    {
+        nearestTerm.assign(collNearestTerm.begin(), collNearestTerm.end());
+        return;
+    }
 
     vector<pair<double,int> >simTermid;
     dCounter->startIteration();
@@ -439,36 +445,13 @@ void lemur::retrieval::RetMethod::nearestTerm2Vec(vector<double> vec ,vector<int
         //cerr<<simTermid[i].second<<" ";
     }
 
+    if(!isRellNearest)
+    if(collNearestTerm.size() == 0)
+        collNearestTerm.assign(nearestTerm.begin(), nearestTerm.end());
+
     delete dCounter;
-#endif
-
-#if 0 //nearest from Coll
-    vector<pair<double,int> >simTermid;
-    //vector<vector<double> > outVec;
-    for(int i =1 ; i< ind.termCountUnique() ; i++)
-    {
-        vector<double>dtemp;
-        if( wordEmbedding.find(i) != wordEmbedding.end() )
-            dtemp.assign(wordEmbedding[i].begin() ,wordEmbedding[i].end());
-        else
-        {
-            //cerr<<"no nearest found!";
-            continue;
-        }
-
-        double sim = this->cosineSim(vec,dtemp);
-        //double sim = this->softMaxFunc(vec,dtemp);
-        simTermid.push_back(pair<double,int>(sim,i));
-    }
-    std::sort(simTermid.begin() , simTermid.end(),pairCompare);
-
-    for(int i = 0 ; i < tops4EachQueryTerm ; i++)//n
-    {
-        nearestTerm.push_back(make_pair<int ,double > (simTermid[i].second,simTermid[i].first));
-    }
-#endif
-
 }
+
 
 void lemur::retrieval::RetMethod::computeClipRM1(vector<int> relJudgDoc ,lemur::api::TextQueryRep &origRep )
 {
@@ -751,8 +734,8 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 #define COSREL 0
     /**other methods***/
 #define CENTROID 0
-#define COMBSUM 0
-#define COMBMNZ 1
+#define COMBSUM 1
+#define COMBMNZ 0
 #define COMBMAX 0
 #define CENTROIDLOGISTIC 0
 
@@ -890,7 +873,6 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
 
     int countPos = selectedWordProbId.size();
-
     for (int i = 0; i < countPos; i++)
     {
         lmCounter.incCount(selectedWordProbId[i].second , selectedWordProbId[i].first);
@@ -972,7 +954,8 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     COUNT_T numTerms = ind.termCountUnique();
     lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
 
-    for (int i = 0; i < tops4EachQuery; i++)//v
+    int ttt = min((int)tops4EachQuery , (int)probWordVec.size());
+    for (int i = 0; i < ttt; i++)//v
         lmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
 
 
@@ -1050,7 +1033,8 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     COUNT_T numTerms = ind.termCountUnique();
     lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
 
-    for (int i = 0; i < tops4EachQuery; i++)//v
+    int ttt = min((int)tops4EachQuery , (int)probWordVec.size());
+    for (int i = 0; i < ttt; i++)//v
         lmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
 
 
@@ -1094,10 +1078,10 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
             //double idf1 = log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[i].first ) );
             //double idf2= log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[i].first) ) /(log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[i].first) )+1 ) ;
-            double dist = weightedQueryTerms[i].second;
-            double sw = 1/1+exp(-10.0*dist);
+            //double dist = weightedQueryTerms[i].second;
+            //double sw = 1/1+exp(-10.0*dist);
             //double expdist = exp(dist);
-            double impOfQTerm = sw;
+            double impOfQTerm = 1.0;
 
             idScore[temp[j].second] += temp[j].first * impOfQTerm  ;
         }
@@ -1113,7 +1097,8 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     COUNT_T numTerms = ind.termCountUnique();
     lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
 
-    for (int i = 0; i < tops4EachQuery; i++)//v
+    int ttt = min((int)tops4EachQuery , (int)probWordVec.size());
+    for (int i = 0; i < ttt; i++)//v
         lmCounter.incCount(probWordVec[i].second , probWordVec[i].first);
 
 
@@ -1171,7 +1156,6 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     lemur::utility::ArrayCounter<double> lmCounter(numTerms+1);
 
     int countPos = min((int)tops4EachQuery , (int)probWordVec.size());
-
     for (int i = 0; i < countPos; i++)
     {
         //cerr<<probWordVec[i].second;
@@ -1183,7 +1167,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
     lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
 
-    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
+    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), countPos/*qryParam.fbTermCount*/, qryParam.fbPrSumTh, qryParam.fbPrTh);
 
 
     delete dCounter;
@@ -1206,7 +1190,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
     vector<pair<double, int> >selectedWordProbId;
 
-    //ofstream write ("QueryWord-expanded-terms-2.txt", fstream::app);
+    //ofstream write ("Logistic_expanded_terms.txt", fstream::app);
     for(int ii = 0 ; ii < queryTermsIdVec.size() ; ii++)//qi
     {
         double totalScore = 0.0 ;
@@ -1240,9 +1224,9 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
                     double score_ = log(( tf_w + lambda_w )/lambda_w );
 
 
-                    score_ *= exp(sc); //CHECK IT!!! (+1 removed)// [-1:1]->[0:2]
+                    //score_ *= exp(sc); //CHECK IT!!! (+1 removed)// [-1:1]->[0:2]
                     //score_ *=1/1+exp(-10.0*sc);
-                    //score_ *= sc;
+                    score_ *= sc;
 
                     totalScore += score_;
 
@@ -1303,10 +1287,33 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
         lmCounter.incCount(selectedWordProbId[i].second , selectedWordProbId[i].first);
     }
 
+#if 0
+    /****************TEST*************************/
+    finalScoreIdVec.clear();
+    lmCounter.startIteration();
+    while(lmCounter.hasMore())
+    {
+        int id;
+        double wei;
+        lmCounter.nextCount(id,wei);
+        finalScoreIdVec.push_back(make_pair<double,int>(wei, id) );
+    }
+    std::sort(finalScoreIdVec.begin() , finalScoreIdVec.end() , pairCompare);
+    write<<"relSize: "<<relJudgDoc.size()<<endl;
+    for (int i = 0; i < 10; i++)
+        write<<ind.term(finalScoreIdVec[i].second) << " ,";
+    //write<<ind.term(finalScoreIdVec[i].second) << " ( "<<finalScoreIdVec[i].first<<" ) ,";
+    write<<"\n\n";
+    write.close();
+
+    /****************TEST*************************/
+#endif
+
+
 
     QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
     lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
-    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
+    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), countPos/*qryParam.fbTermCount*/, qryParam.fbPrSumTh, qryParam.fbPrTh);
 
     //delete dCounter;
     delete fblm;

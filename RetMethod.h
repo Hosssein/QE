@@ -922,6 +922,9 @@ public:
     double relMu, nonRelMu, relX2, nonRelX2;//for thrUpdating
 
     double numOfPosFB,numOfNegFB;
+
+    bool isCollComputed;
+    vector<pair<int,double> > collNearestTerm;
 protected:
     //double *prev_distQuery;
     map <int,double>prev_distQuery;
@@ -1003,13 +1006,13 @@ public:
     void setTop4EachQuery(double n)
     {
         tops4EachQuery = n;
-        //this->qryParam.fbTermCount = n;
+        this->qryParam.fbTermCount = n;
     }
 
     void setTopWords4EachQueryTerm(double n)
     {
         tops4EachQueryTerm = n;
-        this->qryParam.fbTermCount = n;
+        //this->qryParam.fbTermCount = n;
     }
 
     //bool *relComputed;
