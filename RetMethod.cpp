@@ -922,10 +922,10 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
             //double idf1 = log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[i].first ) );
             //double idf2= log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[i].first) ) /(log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[i].first) )+1 ) ;
-            double dist = weightedQueryTerms[i].second;
+            //double dist = weightedQueryTerms[i].second;
             //double sw = 1/1+exp(-10.0*dist);
-            double expdist = exp(dist);
-            double impOfQTerm = expdist;
+            //double expdist = exp(dist);
+            double impOfQTerm = 1.0;
 
 
             if( idScore[temp[j].second] < temp[j].first )
@@ -961,7 +961,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
     QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
     lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
-    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
+    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), ttt/*qryParam.fbTermCount*/, qryParam.fbPrSumTh, qryParam.fbPrTh);
 
     delete fblm;
 
@@ -1040,7 +1040,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
     QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
     lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
-    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
+    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), ttt/*qryParam.fbTermCount*/, qryParam.fbPrSumTh, qryParam.fbPrTh);
 
     delete fblm;
 
