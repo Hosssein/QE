@@ -730,11 +730,11 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 {
 #define BL 0
     /**mine methods****/
-#define LOGLOGISTIC 0
+#define LOGLOGISTIC 1
 #define COSREL 0
     /**other methods***/
 #define CENTROID 0
-#define COMBSUM 1
+#define COMBSUM 0
 #define COMBMNZ 0
 #define COMBMAX 0
 #define CENTROIDLOGISTIC 0
@@ -1104,7 +1104,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
     QueryModel *qr = dynamic_cast<QueryModel *> (&origRep);
     lemur::langmod::MLUnigramLM *fblm = new lemur::langmod::MLUnigramLM(lmCounter, ind.termLexiconID());
-    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), qryParam.fbTermCount, qryParam.fbPrSumTh, qryParam.fbPrTh);
+    qr->interpolateWith(*fblm, (1-qryParam.fbCoeff), ttt/*qryParam.fbTermCount*/, qryParam.fbPrSumTh, qryParam.fbPrTh);
 
 
 
@@ -1191,7 +1191,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
     vector<pair<double, int> >selectedWordProbId;
 
     //ofstream write ("Logistic_expanded_terms.txt", fstream::app);
-    for(int ii = 0 ; ii < queryTermsIdVec.size() ; ii++)//qi
+    //for(int ii = 0 ; ii < queryTermsIdVec.size() ; ii++)//qi
     {
         double totalScore = 0.0 ;
         finalScoreIdVec.clear();
@@ -1212,8 +1212,8 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
                 map<int, vector<double> >::iterator tempit = wordEmbedding.find(eventInd);
                 if( tempit != endIt )//found!
                 {
-                    vector<double> tt = tempit->second;
-                    double sc = cosineSim(queryTermsIdVec[ii].second , tt);
+                    //vector<double> tt = tempit->second;
+                    //double sc = cosineSim(queryTermsIdVec[ii].second , tt);
 
                     double TF = weight;
                     double docLength = ind.docLength( relJudgDoc[i] );
@@ -1226,7 +1226,7 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
                     //score_ *= exp(sc); //CHECK IT!!! (+1 removed)// [-1:1]->[0:2]
                     //score_ *=1/1+exp(-10.0*sc);
-                    score_ *= sc;
+                    //score_ *= sc;
 
                     totalScore += score_;
 
@@ -1248,10 +1248,10 @@ void lemur::retrieval::RetMethod::updateProfile(lemur::api::TextQueryRep &origRe
 
         //double idf1 = log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first ) );
         //double idf2= log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) ) /(log((double)ind.docCount() / (double)ind.docCount(queryTermsIdVec[ii].first) )+1 ) ;
-        double cos = weightedQueryTerms[ii].second;
-        double expcos = exp(cos);
+        //double cos = weightedQueryTerms[ii].second;
+        //double expcos = exp(cos);
         //double sw = 1/1+exp(-10.0*cos);
-        double impOfQTerm = expcos;
+        double impOfQTerm = 1.0;
 
 
         //cerr<<"q: "<<ind.term(queryTermsIdVec[ii].first)<<endl;

@@ -140,6 +140,22 @@ int main(int argc, char * argv[])
         indexPath= "/home/iis/Desktop/RS-Framework/DataSets/Infile/Index/en_Stemmed_withoutSW/index.key";
         queryPath = "/home/iis/Desktop/RS-Framework/DataSets/Infile/Data/q_en_titleKeyword_en.stemmed.xml";
         break;
+
+    case 6://server khafane:D
+        if(DATASET == 0)//infile
+        {
+            judgmentPath = "/home/ubuntu/hrz/Data/INFILE/qrels_en";
+            indexPath ="/home/ubuntu/hrz/index/infile/en_Stemmed_withoutSW/index.key";
+            queryPath = "/home/ubuntu/hrz/Data/INFILE/q_en_titleKeyword_en.stemmed.xml";
+
+        }else if(DATASET == 1)//ohsu
+        {
+            judgmentPath = "";
+            indexPath= "";
+            queryPath = "";
+        }
+        break;
+
     default:
         if(DATASET == 0)//infile
         {
@@ -189,12 +205,12 @@ void computeRSMethods(Index* ind)
     else if (DATASET == 1)
         outFilename =outputFileNameHM+"_ohsu_";
 
-#define COMPAVG 1
+#define COMPAVG 0
 
-    isRellNearest = true;
-    string methodName = "_weightedQ_combsum_rell"; //RM1(c=n=100)
+    isRellNearest = false;//compute nearest from rell//used in comb..
+    string methodName = "_weightedQ_logistic_n_n"; //RM1(c=n=100)
     outFilename += methodName;
-    outFilename += "_lambda{fard}_#top{50}_#perQ:{10,25}";//_#perQuery:{10-25(15)}";//#perQuery:{10-25(15)}//_alpha[0.1-1(0.4)]//#fb{50}_//#perQuery:{10-25(15)}////_//#topPerQueryWord:{(50,100)}////c(50,100)_//// #topPosW:30-30(0)
+    outFilename += "_lambda{zoj}_topPos:{5-15(5)}";//_#perQuery:{10-25(15)}";//#perQuery:{10-25(15)}//_alpha[0.1-1(0.4)]//#fb{50}_//#perQuery:{10-25(15)}////_//#topPerQueryWord:{(50,100)}////c(50,100)_//// #topPosW:30-30(0)
 
     ofstream out(outFilename.c_str());
 
@@ -207,17 +223,17 @@ void computeRSMethods(Index* ind)
     double start_thresh =startThresholdHM, end_thresh= endThresholdHM;
 
     for (double thresh = start_thresh ; thresh<=end_thresh ; thresh += intervalThresholdHM)
-        for(double fbCoef = 0.1; fbCoef <=0.91 ; fbCoef+=0.2)//lambda //5
+        for(double fbCoef = 0.2; fbCoef <=0.91 ; fbCoef+=0.2)//lambda //5
         {
             //for(double alpha = 0.1 ; alpha <=1.01 ;alpha +=0.4)//alpha //for RM1 interpolate //4
             {
-                //for( double topPos = 5; topPos <= 15 ; topPos += 5 )//3//15 khube //n(50,100) for each query term//c in RM1
+                for( double topPos = 5; topPos <= 15 ; topPos += 5 )//3//15 khube //n(50,100) for each query term//c in RM1
                 {
-                    for(double SelectedWord4Q = 10; SelectedWord4Q <= 25 ; SelectedWord4Q += 15)//2 //v(10,25) for each query(whole)
+                    //for(double SelectedWord4Q = 10; SelectedWord4Q <= 25 ; SelectedWord4Q += 15)//2 //v(10,25) for each query(whole)
                     {
                         //double fbCoef = -1;//lambda
-                        double topPos = 50;//n//c in rm1
-                        //double SelectedWord4Q = -1;
+                        //double topPos = -1;//n//c in rm1
+                        double SelectedWord4Q = -1;
 
                         double alpha = -1;
                         for(double c1 = 0.1 ; c1< 0.21 ;c1 += 0.05)//inc//3
@@ -746,7 +762,12 @@ void readWordEmbeddingFile(Index *ind)
             in.open("/home/iis/Desktop/Edu/thesis/wordEmbeddingVector/ohsu_stemmed_withoutSW_vectors100.txt");
         }
 
-    }else
+    }else if(WHO == 6)
+    {
+        if(DATASET == 0)//infile
+            in.open("/home/ubuntu/hrz/Data/infile_docs_Stemmed_withoutSW_W2V.vectors");
+    }
+    else
     {
         if(DATASET == 0)//infile
             in.open("/home/hossein/Desktop/IIS/Lemur/DataSets/wordEmbeddingVector/infile_docs_Stemmed_withoutSW_W2V.vectors");
